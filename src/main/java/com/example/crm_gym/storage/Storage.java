@@ -7,9 +7,8 @@ import com.example.crm_gym.models.TrainingType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
@@ -24,8 +23,8 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Slf4j
 @Component
-@PropertySource("application.properties")
 public class Storage {
     private static final Logger logger = LoggerFactory.getLogger(Storage.class);
 
@@ -33,8 +32,7 @@ public class Storage {
     private final Map<Integer, Trainee> traineeStorage;
     private final Map<Integer, Training> trainingStorage;
 
-    @Value("${data.file.path}")
-    private String dataFilePath;
+    private String dataFilePath = "src/main/resources/initial_data.csv";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
@@ -49,9 +47,11 @@ public class Storage {
         logger.info("Storage initialized with storages for trainers, trainees, and trainings.");
     }
 
+
     @PostConstruct
     public void init() {
         logger.info("Entering init() method to load data from file: {}", dataFilePath);
+
         try (BufferedReader br = new BufferedReader(new FileReader(dataFilePath))) {
             String line;
             while ((line = br.readLine()) != null) {
