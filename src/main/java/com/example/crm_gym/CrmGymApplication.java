@@ -32,7 +32,7 @@ public class CrmGymApplication {
 			System.out.println("Adding a new Trainee...");
 
 			Trainee newTrainee = new Trainee(
-					0, "John", "Doe", "john.doe", "passJohn", true,
+					5, "John", "Doe", "john.doe", "passJohn", true,
 					formatter.parse("29-08-1995"), "kkkkk"
 			);
 			traineeService.createTrainee(newTrainee.getUserId(), newTrainee.getFirstName(), newTrainee.getLastName(), newTrainee.getDateOfBirth(), newTrainee.getAddress());
