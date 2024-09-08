@@ -1,5 +1,6 @@
 package com.example.crm_gym.facade;
 
+import com.example.crm_gym.exception.DaoException;
 import com.example.crm_gym.models.Trainee;
 import com.example.crm_gym.models.Trainer;
 import com.example.crm_gym.models.Training;
@@ -12,7 +13,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Component
@@ -30,166 +33,139 @@ public class GymCRMFacade {
         this.trainingService = trainingService;
     }
 
-    public void createTrainee(Trainee trainee) {
-        logger.info("Creating trainee: {}", trainee);
+    public boolean createTrainee(Trainee trainee) {
         try {
-            traineeService.createTrainee(trainee.getUserId(), trainee.getFirstName(), trainee.getLastName(),
+            return traineeService.createTrainee(trainee.getUserId(), trainee.getFirstName(), trainee.getLastName(),
                     trainee.getDateOfBirth(), trainee.getAddress());
-            logger.info("Trainee created successfully: {}", trainee);
         } catch (Exception e) {
             logger.error("Error creating trainee: {}", trainee, e);
+            return false;
         }
     }
 
-    public Trainee getTraineeById(int traineeId) {
-        logger.info("Fetching trainee with ID {}", traineeId);
+    public Optional<Trainee> getTraineeById(int traineeId) {
         try {
-            Trainee trainee = traineeService.getTrainee(traineeId);
-            logger.info("Trainee fetched successfully: {}", trainee);
-            return trainee;
+            return traineeService.getTrainee(traineeId);
         } catch (Exception e) {
             logger.error("Error fetching trainee with ID {}", traineeId, e);
-            return null;
+            return Optional.empty();
         }
     }
 
     public List<Trainee> getAllTrainees() {
-        logger.info("Fetching all trainees");
         try {
-            List<Trainee> trainees = traineeService.getAllTrainees();
-            logger.info("All trainees fetched successfully, count: {}", trainees.size());
-            return trainees;
-        } catch (Exception e) {
+            return traineeService.getAllTrainees();
+        } catch (DaoException e) {
             logger.error("Error fetching all trainees", e);
-            return null;
+            return Collections.emptyList();
         }
     }
 
-    public void updateTrainee(int traineeId, Trainee trainee) {
-        logger.info("Updating trainee with ID {}: {}", traineeId, trainee);
+    public boolean updateTrainee(int traineeId, Trainee trainee) {
         try {
-            traineeService.updateTrainee(traineeId, trainee);
-            logger.info("Trainee updated successfully: {}", trainee);
+            return traineeService.updateTrainee(traineeId, trainee);
         } catch (Exception e) {
             logger.error("Error updating trainee with ID {}: {}", traineeId, e);
+            return false;
         }
     }
 
-    public void deleteTrainee(int traineeId) {
-        logger.info("Deleting trainee with ID {}", traineeId);
+    public boolean deleteTrainee(int traineeId) {
         try {
-            traineeService.deleteTrainee(traineeId);
-            logger.info("Trainee deleted successfully with ID {}", traineeId);
+            return traineeService.deleteTrainee(traineeId);
         } catch (Exception e) {
             logger.error("Error deleting trainee with ID {}", traineeId, e);
+            return false;
         }
     }
 
-    public void createTrainer(Trainer trainer) {
-        logger.info("Creating trainer: {}", trainer);
+    public boolean createTrainer(Trainer trainer) {
         try {
-            trainerService.createTrainer(trainer.getUserId(), trainer.getFirstName(), trainer.getLastName(), trainer.getSpecialization());
-            logger.info("Trainer created successfully: {}", trainer);
+            return trainerService.createTrainer(trainer.getUserId(), trainer.getFirstName(), trainer.getLastName(), trainer.getSpecialization());
         } catch (Exception e) {
             logger.error("Error creating trainer: {}", trainer, e);
+            return false;
         }
     }
 
-    public Trainer getTrainerById(int trainerId) {
-        logger.info("Fetching trainer with ID {}", trainerId);
+    public Optional<Trainer> getTrainerById(int trainerId) {
         try {
-            Trainer trainer = trainerService.getTrainer(trainerId);
-            logger.info("Trainer fetched successfully: {}", trainer);
-            return trainer;
+            return trainerService.getTrainer(trainerId);
         } catch (Exception e) {
             logger.error("Error fetching trainer with ID {}", trainerId, e);
-            return null;
+            return Optional.empty();
         }
     }
 
     public List<Trainer> getAllTrainers() {
-        logger.info("Fetching all trainers");
         try {
-            List<Trainer> trainers = trainerService.getAllTrainers();
-            logger.info("All trainers fetched successfully, count: {}", trainers.size());
-            return trainers;
-        } catch (Exception e) {
+            return trainerService.getAllTrainers();
+        } catch (DaoException e) {
             logger.error("Error fetching all trainers", e);
-            return null;
+            return Collections.emptyList();
         }
     }
 
-    public void updateTrainer(int trainerId, Trainer trainer) {
-        logger.info("Updating trainer with ID {}: {}", trainerId, trainer);
+    public boolean updateTrainer(int trainerId, Trainer trainer) {
         try {
-            trainerService.updateTrainer(trainerId, trainer);
-            logger.info("Trainer updated successfully: {}", trainer);
+            return trainerService.updateTrainer(trainerId, trainer);
         } catch (Exception e) {
             logger.error("Error updating trainer with ID {}: {}", trainerId, e);
+            return false;
         }
     }
 
-    public void deleteTrainer(int trainerId) {
-        logger.info("Deleting trainer with ID {}", trainerId);
+    public boolean deleteTrainer(int trainerId) {
         try {
-            trainerService.deleteTrainer(trainerId);
-            logger.info("Trainer deleted successfully with ID {}", trainerId);
+            return trainerService.deleteTrainer(trainerId);
         } catch (Exception e) {
             logger.error("Error deleting trainer with ID {}", trainerId, e);
+            return false;
         }
     }
 
-    public void createTraining(Training training) {
-        logger.info("Creating training: {}", training);
+    public boolean createTraining(Training training) {
         try {
-            trainingService.createTraining(training);
-            logger.info("Training created successfully: {}", training);
+            return trainingService.createTraining(training);
         } catch (Exception e) {
             logger.error("Error creating training: {}", training, e);
+            return false;
         }
     }
 
-    public Training getTrainingById(int trainingId) {
-        logger.info("Fetching training with ID {}", trainingId);
+    public Optional<Training> getTrainingById(int trainingId) {
         try {
-            Training training = trainingService.getTraining(trainingId);
-            logger.info("Training fetched successfully: {}", training);
-            return training;
+            return trainingService.getTraining(trainingId);
         } catch (Exception e) {
             logger.error("Error fetching training with ID {}", trainingId, e);
-            return null;
+            return Optional.empty();
         }
     }
 
     public List<Training> getAllTrainings() {
-        logger.info("Fetching all trainings");
         try {
-            List<Training> trainings = trainingService.getAllTrainings();
-            logger.info("All trainings fetched successfully, count: {}", trainings.size());
-            return trainings;
-        } catch (Exception e) {
+            return trainingService.getAllTrainings();
+        } catch (DaoException e) {
             logger.error("Error fetching all trainings", e);
-            return null;
+            return Collections.emptyList();
         }
     }
 
-    public void updateTraining(int id, Training training) {
-        logger.info("Updating training with ID {}: {}", id, training);
+    public boolean updateTraining(int id, Training training) {
         try {
-            trainingService.updateTraining(id, training);
-            logger.info("Training updated successfully: {}", training);
+            return trainingService.updateTraining(id, training);
         } catch (Exception e) {
             logger.error("Error updating training with ID {}: {}", id, e);
+            return false;
         }
     }
 
-    public void deleteTraining(int trainingId) {
-        logger.info("Deleting training with ID {}", trainingId);
+    public boolean deleteTraining(int trainingId) {
         try {
-            trainingService.deleteTraining(trainingId);
-            logger.info("Training deleted successfully with ID {}", trainingId);
+            return trainingService.deleteTraining(trainingId);
         } catch (Exception e) {
             logger.error("Error deleting training with ID {}", trainingId, e);
+            return false;
         }
     }
 }

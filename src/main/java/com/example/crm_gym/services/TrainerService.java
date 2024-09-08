@@ -1,6 +1,7 @@
 package com.example.crm_gym.services;
 
 import com.example.crm_gym.dao.TrainerDAO;
+import com.example.crm_gym.exception.DaoException;
 import com.example.crm_gym.models.Trainer;
 import com.example.crm_gym.utils.UserProfileUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -9,7 +10,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -20,92 +23,70 @@ public class TrainerService {
     @Autowired
     private TrainerDAO trainerDAO;
 
-    public void createTrainer(int userId, String firstName, String lastName, String specialization) {
-        logger.info("Entering createTrainer() with userId: {}, firstName: {}, lastName: {}, specialization: {}",
-                userId, firstName, lastName, specialization);
+    public boolean createTrainer(int userId, String firstName, String lastName, String specialization) {
         try {
-            logger.info("Generating unique username for trainer with firstName: {} and lastName: {}", firstName, lastName);
             String username = generateUniqueUsername(firstName, lastName);
-            logger.info("Generated unique username: {}", username);
-
-            logger.info("Generating random password for trainer");
             String password = UserProfileUtil.generatePassword();
-            logger.info("Generated random password");
-
-            logger.info("Creating new Trainer object with username: {} and password: {}", username, password);
             Trainer trainer = new Trainer(userId, firstName, lastName, username, password, true, specialization);
-
-            logger.info("Saving the new trainer to the database: {}", trainer);
-            trainerDAO.save(trainer);
-            logger.info("Trainer saved successfully with userId: {}", userId);
-
+            return trainerDAO.save(trainer);
         } catch (Exception e) {
-            logger.error("Error creating trainer with userId: {}", userId, e);
-        } finally {
-            logger.info("Exiting createTrainer() method");
+            logger.error("Error creating trainer with id: {}", userId, e);
+            return false;
         }
     }
 
     private String generateUniqueUsername(String firstName, String lastName) {
-        logger.info("Entering generateUniqueUsername() with firstName: {} and lastName: {}", firstName, lastName);
-
-        List<Trainer> existingTrainers = trainerDAO.findAll();
-        logger.info("Fetched {} existing trainers to check for username conflicts", existingTrainers.size());
-
+        Optional<List<Trainer>> optionalTrainers = trainerDAO.findAll();
+        List<Trainer> existingTrainers = optionalTrainers.orElse(Collections.emptyList());
         int suffix = 0;
         while (true) {
             String username = UserProfileUtil.generateUsername(firstName, lastName, suffix);
-
-            int finalSuffix = suffix;
             if (existingTrainers.stream().noneMatch(t -> t.getUsername().equals(username))) {
-                logger.info("Generated username: {}", username);
                 return username;
             }
             suffix++;
         }
     }
 
-    public void updateTrainer(int userId, Trainer trainer) {
-        logger.info("Updating trainer with ID {}: {}", userId, trainer);
+    public boolean updateTrainer(int userId, Trainer trainer) {
         try {
-            trainerDAO.update(userId, trainer);
-            logger.info("Trainer updated successfully: {}", trainer);
+            return trainerDAO.update(userId, trainer);
         } catch (Exception e) {
             logger.error("Error updating trainer with ID {}: {}", userId, e);
+            return false;
         }
     }
 
-    public void deleteTrainer(int userId) {
-        logger.info("Deleting trainer with ID {}", userId);
+    public boolean deleteTrainer(int userId) {
         try {
-            trainerDAO.delete(userId);
-            logger.info("Trainer deleted successfully with ID {}", userId);
+            return trainerDAO.delete(userId);
         } catch (Exception e) {
             logger.error("Error deleting trainer with ID {}", userId, e);
+            return false;
         }
     }
 
-    public Trainer getTrainer(int userId) {
-        logger.info("Fetching trainer with ID {}", userId);
+    public Optional<Trainer> getTrainer(int userId) {
         try {
-            Trainer trainer = trainerDAO.findById(userId);
-            logger.info("Trainer fetched successfully: {}", trainer);
-            return trainer;
-        } catch (Exception e) {
+            return trainerDAO.findById(userId);
+        } catch (DaoException e) {
             logger.error("Error fetching trainer with ID {}", userId, e);
-            return null;
+            return Optional.empty();
         }
     }
 
     public List<Trainer> getAllTrainers() {
-        logger.info("Fetching all trainers");
         try {
-            List<Trainer> trainers = trainerDAO.findAll();
-            logger.info("All trainers fetched successfully, count: {}", trainers.size());
-            return trainers;
-        } catch (Exception e) {
+            Optional<List<Trainer>> trainers = trainerDAO.findAll();
+            if (trainers.isPresent()) {
+                return trainers.get();
+            } else {
+                logger.warn("No trainers found.");
+                return Collections.emptyList();
+            }
+        } catch (DaoException e) {
             logger.error("Error fetching all trainers", e);
-            return null;
+            return Collections.emptyList();
         }
     }
 }

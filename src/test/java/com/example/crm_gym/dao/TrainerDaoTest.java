@@ -1,6 +1,7 @@
 package com.example.crm_gym.dao;
 
 import com.example.crm_gym.config.AppConfig;
+import com.example.crm_gym.exception.DaoException;
 import com.example.crm_gym.models.Trainer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,15 +12,14 @@ import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = AppConfig.class)
 public class TrainerDaoTest {
-    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
 
     @Autowired
     private TrainerDAO trainerDAO;
@@ -34,15 +34,15 @@ public class TrainerDaoTest {
         Trainer trainer = new Trainer(15, "Emma", "Stown", "emmastown@gmail.com", "pas11s", true, "spec2");
         trainerDAO.save(trainer);
 
-        Trainer found = trainerDAO.findById(15);
+        Optional<Trainer> found = trainerDAO.findById(15);
 
-        assertNotNull(found);
-        assertEquals("Emma", found.getFirstName());
-        assertEquals("Stown", found.getLastName());
-        assertEquals("emmastown@gmail.com", found.getUsername());
-        assertEquals("pas11s", found.getPassword());
-        assertTrue(found.isActive());
-        assertEquals("spec2", found.getSpecialization());
+        assertTrue(found.isPresent());
+        assertEquals("Emma", found.get().getFirstName());
+        assertEquals("Stown", found.get().getLastName());
+        assertEquals("emmastown@gmail.com", found.get().getUsername());
+        assertEquals("pas11s", found.get().getPassword());
+        assertTrue(found.get().isActive());
+        assertEquals("spec2", found.get().getSpecialization());
     }
 
     @Test
@@ -53,31 +53,40 @@ public class TrainerDaoTest {
         Trainer updatedTrainer = new Trainer(15, "Emma", "Stown", "emmastown@gmail.com", "newpass", false, "Fitness");
         trainerDAO.update(15, updatedTrainer);
 
-        Trainer found = trainerDAO.findById(15);
-        assertNotNull(found);
-        assertEquals("Emma", found.getFirstName());
-        assertEquals("Stown", found.getLastName());
-        assertEquals("emmastown@gmail.com", found.getUsername());
-        assertEquals("newpass", found.getPassword());
-        assertFalse(found.isActive());
-        assertEquals("Fitness", found.getSpecialization());
+        Optional<Trainer> found = trainerDAO.findById(15);
+        assertTrue(found.isPresent());
+        assertEquals("Emma", found.get().getFirstName());
+        assertEquals("Stown", found.get().getLastName());
+        assertEquals("emmastown@gmail.com", found.get().getUsername());
+        assertEquals("newpass", found.get().getPassword());
+        assertFalse(found.get().isActive());
+        assertEquals("Fitness", found.get().getSpecialization());
     }
 
     @Test
     void testDeleteTrainer() throws ParseException {
-        Trainer trainer = new Trainer(15, "Emma", "Stown", "emmastown@gmail.com", "pa11s", true, "spec2");
+        int id = 15;
+        Trainer trainer = new Trainer(id, "Emma", "Stown", "emmastown@gmail.com", "pa11s", true, "spec2");
         trainerDAO.save(trainer);
 
-        trainerDAO.delete(15);
+        Optional<Trainer> foundBeforeDelete = trainerDAO.findById(id);
+        assertTrue(foundBeforeDelete.isPresent());
 
-        Trainer found = trainerDAO.findById(15);
-        assertNull(found);
+        trainerDAO.delete(id);
+
+        DaoException exception = assertThrows(DaoException.class, () -> {
+            trainerDAO.findById(id);
+        });
+
+        assertEquals("Error finding trainer with id: " + id, exception.getMessage());
     }
 
     @Test
-    void testFindAllTrainees() {
-        List<Trainer> trainees = trainerDAO.findAll();
-        assertNotNull(trainees);
-        assertTrue(trainees.size() > 0);
+    void testFindAllTrainers() {
+        Optional<List<Trainer>> optionalTrainers = trainerDAO.findAll();
+        assertTrue(optionalTrainers.isPresent());
+        List<Trainer> trainers = optionalTrainers.get();
+        assertNotNull(trainers);
+        assertTrue(trainers.size() > 0);
     }
 }

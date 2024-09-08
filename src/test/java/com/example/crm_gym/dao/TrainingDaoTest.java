@@ -1,6 +1,7 @@
 package com.example.crm_gym.dao;
 
 import com.example.crm_gym.config.AppConfig;
+import com.example.crm_gym.exception.DaoException;
 import com.example.crm_gym.models.Training;
 import com.example.crm_gym.models.TrainingType;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +15,8 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(SpringExtension.class)
@@ -34,15 +37,15 @@ public class TrainingDaoTest {
         Training training = new Training(20, 3, 5, "Yoga group 2", TrainingType.YOGA, formatter.parse("28-08-2024"), "58");
         trainingDAO.save(training);
 
-        Training found = trainingDAO.findById(20);
+        Optional<Training> found = trainingDAO.findById(20);
 
-        assertNotNull(found);
-        assertEquals(training.getTraineeId(), found.getTraineeId());
-        assertEquals(training.getTrainerId(), found.getTrainerId());
-        assertEquals(training.getTrainingName(), found.getTrainingName());
-        assertEquals(training.getTrainingType(), found.getTrainingType());
-        assertEquals(training.getTrainingDate(), found.getTrainingDate());
-        assertEquals(training.getTrainingDuration(), found.getTrainingDuration());
+        assertTrue(found.isPresent());
+        assertEquals(training.getTraineeId(), found.get().getTraineeId());
+        assertEquals(training.getTrainerId(), found.get().getTrainerId());
+        assertEquals(training.getTrainingName(), found.get().getTrainingName());
+        assertEquals(training.getTrainingType(), found.get().getTrainingType());
+        assertEquals(training.getTrainingDate(), found.get().getTrainingDate());
+        assertEquals(training.getTrainingDuration(), found.get().getTrainingDuration());
     }
 
     @Test
@@ -53,31 +56,39 @@ public class TrainingDaoTest {
         Training updatedTraining = new Training(20, 3, 5, "Yoga group 2", TrainingType.YOGA, formatter.parse("28-08-2024"), "58");
         trainingDAO.update(20, updatedTraining);
 
-        Training found = trainingDAO.findById(20);
-        assertNotNull(found);
-        assertEquals(updatedTraining.getTraineeId(), found.getTraineeId());
-        assertEquals(updatedTraining.getTrainerId(), found.getTrainerId());
-        assertEquals(updatedTraining.getTrainingName(), found.getTrainingName());
-        assertEquals(updatedTraining.getTrainingType(), found.getTrainingType());
-        assertEquals(updatedTraining.getTrainingDate(), found.getTrainingDate());
-        assertEquals(updatedTraining.getTrainingDuration(), found.getTrainingDuration());
+        Optional<Training> found = trainingDAO.findById(20);
+        assertTrue(found.isPresent());
+        assertEquals(updatedTraining.getTraineeId(), found.get().getTraineeId());
+        assertEquals(updatedTraining.getTrainerId(), found.get().getTrainerId());
+        assertEquals(updatedTraining.getTrainingName(), found.get().getTrainingName());
+        assertEquals(updatedTraining.getTrainingType(), found.get().getTrainingType());
+        assertEquals(updatedTraining.getTrainingDate(), found.get().getTrainingDate());
+        assertEquals(updatedTraining.getTrainingDuration(), found.get().getTrainingDuration());
     }
 
     @Test
     void testDeleteTraining() throws ParseException {
-        Training training = new Training(20, 3, 5, "Yoga group 2", TrainingType.YOGA, formatter.parse("28-08-2024"), "58");
+        int id = 20;
+        Training training = new Training(id, 3, 5, "Yoga group 2", TrainingType.YOGA, formatter.parse("28-08-2024"), "58");
         trainingDAO.save(training);
+        Optional<Training> foundBeforeDelete = trainingDAO.findById(id);
+        assertTrue(foundBeforeDelete.isPresent());
 
-        trainingDAO.delete(20);
+        trainingDAO.delete(id);
 
-        Training found = trainingDAO.findById(20);
-        assertNull(found);
+        DaoException exception = assertThrows(DaoException.class, () -> {
+            trainingDAO.findById(id);
+        });
+
+        assertEquals("Error finding training with id: " + id, exception.getMessage());
     }
 
     @Test
     void testFindAllTrainings() {
-        List<Training> trainings = trainingDAO.findAll();
+        Optional<List<Training>> optionalTrainings = trainingDAO.findAll();
+        assertTrue(optionalTrainings.isPresent());
+        List<Training> trainings = optionalTrainings.get();
         assertNotNull(trainings);
-        assertTrue(trainings.size() > 0);
+        assertFalse(trainings.isEmpty());
     }
 }

@@ -1,6 +1,7 @@
 package com.example.crm_gym.services;
 
 import com.example.crm_gym.dao.TrainingDAO;
+import com.example.crm_gym.exception.DaoException;
 import com.example.crm_gym.models.Training;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -8,7 +9,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -19,57 +22,54 @@ public class TrainingService {
     @Autowired
     private TrainingDAO trainingDAO;
 
-    public void createTraining(Training training) {
-        logger.info("Creating training: {}", training);
+    public boolean createTraining(Training training) {
         try {
-            trainingDAO.save(training);
-            logger.info("Training created successfully: {}", training);
+            return trainingDAO.save(training);
         } catch (Exception e) {
             logger.error("Error creating training: {}", training, e);
+            return false;
         }
     }
 
-    public void updateTraining(int id, Training training) {
-        logger.info("Updating training with ID {}: {}", id, training);
+    public boolean updateTraining(int id, Training training) {
         try {
-            trainingDAO.update(id, training);
-            logger.info("Training updated successfully: {}", training);
+            return trainingDAO.update(id, training);
         } catch (Exception e) {
             logger.error("Error updating training with ID {}: {}", id, e);
+            return false;
         }
     }
 
-    public void deleteTraining(int id) {
-        logger.info("Deleting training with ID {}", id);
+    public boolean deleteTraining(int id) {
         try {
-            trainingDAO.delete(id);
-            logger.info("Training deleted successfully with ID {}", id);
+            return trainingDAO.delete(id);
         } catch (Exception e) {
             logger.error("Error deleting training with ID {}", id, e);
+            return false;
         }
     }
 
-    public Training getTraining(int id) {
-        logger.info("Fetching training with ID {}", id);
+    public Optional<Training> getTraining(int id) {
         try {
-            Training training = trainingDAO.findById(id);
-            logger.info("Training fetched successfully: {}", training);
-            return training;
-        } catch (Exception e) {
+            return trainingDAO.findById(id);
+        } catch (DaoException e) {
             logger.error("Error fetching training with ID {}", id, e);
-            return null;
+            return Optional.empty();
         }
     }
 
     public List<Training> getAllTrainings() {
-        logger.info("Fetching all trainings");
         try {
-            List<Training> trainings = trainingDAO.findAll();
-            logger.info("All trainings fetched successfully, count: {}", trainings.size());
-            return trainings;
-        } catch (Exception e) {
+            Optional<List<Training>> trainings = trainingDAO.findAll();
+            if (trainings.isPresent()) {
+                return trainings.get();
+            } else {
+                logger.warn("No trainings found.");
+                return Collections.emptyList();
+            }
+        } catch (DaoException e) {
             logger.error("Error fetching all trainings", e);
-            return null;
+            return Collections.emptyList();
         }
     }
 }

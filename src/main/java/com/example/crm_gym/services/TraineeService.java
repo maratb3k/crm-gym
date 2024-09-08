@@ -1,6 +1,7 @@
 package com.example.crm_gym.services;
 
 import com.example.crm_gym.dao.TraineeDAO;
+import com.example.crm_gym.exception.DaoException;
 import com.example.crm_gym.models.Trainee;
 import com.example.crm_gym.utils.UserProfileUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
+import java.util.Collections;
 
 @Slf4j
 @Service
@@ -25,42 +28,24 @@ public class TraineeService {
         this.traineeDAO = traineeDAO;
     }
 
-    public void createTrainee(int userId, String firstName, String lastName, Date dateOfBirth, String address) {
-        logger.info("Entering createTrainee() with userId: {}, firstName: {}, lastName: {}, dateOfBirth: {}, address: {}",
-                userId, firstName, lastName, dateOfBirth, address);
+    public boolean createTrainee(int userId, String firstName, String lastName, Date dateOfBirth, String address) {
         try {
-            logger.info("Generating unique username for trainee with firstName: {} and lastName: {}", firstName, lastName);
             String username = generateUniqueUsername(firstName, lastName);
-            logger.info("Generated unique username: {}", username);
-
-            logger.info("Generating random password for trainee");
             String password = UserProfileUtil.generatePassword();
-            logger.info("Generated random password");
-
-            logger.info("Creating new Trainee object with username: {} and password: {}", username, password);
             Trainee trainee = new Trainee(userId, firstName, lastName, username, password, true, dateOfBirth, address);
-
-            logger.info("Saving the new trainee to the database: {}", trainee);
-            traineeDAO.save(trainee);
-            logger.info("Trainee saved successfully with userId: {}", userId);
-
+            return traineeDAO.save(trainee);
         } catch (Exception e) {
-            logger.error("Error creating trainee with userId: {}", userId, e);
-        } finally {
-            logger.info("Exiting createTrainee() method");
+            logger.error("Error creating trainee with id: {}", userId, e);
+            return false;
         }
     }
 
     private String generateUniqueUsername(String firstName, String lastName) {
-        logger.info("Entering generateUniqueUsername() with firstName: {} and lastName: {}", firstName, lastName);
-        List<Trainee> existingTrainees = traineeDAO.findAll();
-        logger.info("Fetched {} existing trainees to check for username conflicts", existingTrainees.size());
-
+        Optional<List<Trainee>> optionalTrainees = traineeDAO.findAll();
+        List<Trainee> existingTrainees = optionalTrainees.orElse(Collections.emptyList());
         int suffix = 0;
         while (true) {
             String username = UserProfileUtil.generateUsername(firstName, lastName, suffix);
-            logger.info("Generated username: {}", username);
-
             if (existingTrainees.stream().noneMatch(t -> t.getUsername().equals(username))) {
                 return username;
             }
@@ -68,47 +53,45 @@ public class TraineeService {
         }
     }
 
-    public void updateTrainee(int userId, Trainee trainee) {
-        logger.info("TraineeService - Updating trainee with ID {}: {}", userId, trainee);
+    public boolean updateTrainee(int userId, Trainee trainee) {
         try {
-            traineeDAO.update(userId, trainee);
-            logger.info("TraineeService - Trainee updated successfully: {}", trainee);
+            return traineeDAO.update(userId, trainee);
         } catch (Exception e) {
             logger.error("Error updating trainee with ID {}: {}", userId, e);
+            return false;
         }
     }
 
-    public void deleteTrainee(int userId) {
-        logger.info("TraineeService - Deleting trainee with ID {}", userId);
+    public boolean deleteTrainee(int userId) {
         try {
-            traineeDAO.delete(userId);
-            logger.info("TraineeService - Trainee deleted successfully with ID {}", userId);
+            return traineeDAO.delete(userId);
         } catch (Exception e) {
             logger.error("TraineeService - Error deleting trainee with ID {}", userId, e);
+            return false;
         }
     }
 
-    public Trainee getTrainee(int userId) {
-        logger.info("TraineeService - Fetching trainee with ID {}", userId);
+    public Optional<Trainee> getTrainee(int userId) {
         try {
-            Trainee trainee = traineeDAO.findById(userId);
-            logger.info("TraineeService - Trainee fetched successfully: {}", trainee);
-            return trainee;
-        } catch (Exception e) {
+            return traineeDAO.findById(userId);
+        } catch (DaoException e) {
             logger.error("Error fetching trainee with ID {}", userId, e);
-            return null;
+            return Optional.empty();
         }
     }
 
     public List<Trainee> getAllTrainees() {
-        logger.info("Fetching all trainees");
         try {
-            List<Trainee> trainees = traineeDAO.findAll();
-            logger.info("All trainees fetched successfully, count: {}", trainees.size());
-            return trainees;
-        } catch (Exception e) {
+            Optional<List<Trainee>> trainees = traineeDAO.findAll();
+            if (trainees.isPresent()) {
+                return trainees.get();
+            } else {
+                logger.warn("No trainees found.");
+                return Collections.emptyList();
+            }
+        } catch (DaoException e) {
             logger.error("Error fetching all trainees", e);
-            return null;
+            return Collections.emptyList();
         }
     }
 }

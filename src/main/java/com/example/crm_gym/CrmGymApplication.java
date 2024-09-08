@@ -18,7 +18,6 @@ public class CrmGymApplication {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(AppConfig.class);
 		Storage storage = context.getBean(Storage.class);
 		Map<Integer,Trainee> trainees = storage.getTrainees();
-		List<Trainee> traineeList = storage.findAll(trainees);
 
 		TraineeService traineeService = context.getBean(TraineeService.class);
 

@@ -13,8 +13,10 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 public class TrainingServiceTest {
@@ -33,39 +35,43 @@ public class TrainingServiceTest {
     @Test
     void testCreateTraining() throws ParseException {
         Training training = new Training(1, 2,4,"name1", TrainingType.STRENGTH_TRAINING, formatter.parse("29-08-2024"), "55");
-        doNothing().when(trainingDAO).save(training);
-        trainingService.createTraining(training);
+        when(trainingDAO.save(training)).thenReturn(true);
+        boolean result = trainingService.createTraining(training);
+        assertTrue(result);
         verify(trainingDAO, times(1)).save(training);
     }
 
     @Test
     void testUpdateTraining() throws ParseException {
         Training training = new Training(1, 2,4,"name1", TrainingType.STRENGTH_TRAINING, formatter.parse("29-08-2024"), "55");
-        doNothing().when(trainingDAO).update(1, training);
-        trainingService.updateTraining(1, training);
+        when(trainingDAO.update(1, training)).thenReturn(true);
+        boolean result = trainingService.updateTraining(1, training);
+        assertTrue(result);
         verify(trainingDAO, times(1)).update(1, training);
     }
 
     @Test
     void testDeleteTraining() {
-        doNothing().when(trainingDAO).delete(1);
-        trainingService.deleteTraining(1);
+        when(trainingDAO.delete(1)).thenReturn(true);
+        boolean result = trainingService.deleteTraining(1);
+        assertTrue(result);
         verify(trainingDAO, times(1)).delete(1);
     }
 
     @Test
     void testGetTraining() throws ParseException {
         Training training = new Training(1, 2,4,"name1", TrainingType.STRENGTH_TRAINING, formatter.parse("29-08-2024"), "55");
-        when(trainingDAO.findById(1)).thenReturn(training);
-        Training result = trainingService.getTraining(1);
-        assertEquals(training, result);
+        when(trainingDAO.findById(1)).thenReturn(Optional.of(training));
+        Optional<Training> result = trainingService.getTraining(1);
+        assertTrue(result.isPresent());
+        assertEquals(training, result.get());
         verify(trainingDAO, times(1)).findById(1);
     }
 
     @Test
     void testGetAllTrainings() throws ParseException {
         List<Training> trainings = Arrays.asList(new Training(1, 2,4,"name1", TrainingType.STRENGTH_TRAINING, formatter.parse("29-08-2024"), "55"));
-        when(trainingDAO.findAll()).thenReturn(trainings);
+        when(trainingDAO.findAll()).thenReturn(Optional.of(trainings));
         List<Training> result = trainingService.getAllTrainings();
         assertEquals(trainings, result);
         verify(trainingDAO, times(1)).findAll();

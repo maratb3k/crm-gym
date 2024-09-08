@@ -1,6 +1,7 @@
 package com.example.crm_gym.repository;
 
 import com.example.crm_gym.dao.TrainingDAO;
+import com.example.crm_gym.exception.DaoException;
 import com.example.crm_gym.models.Training;
 import com.example.crm_gym.storage.Storage;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @Repository
@@ -19,85 +20,72 @@ public class TrainingDAOImpl implements TrainingDAO {
     private static final Logger logger = LoggerFactory.getLogger(TrainingDAOImpl.class);
 
     private final Storage storage;
-    private Map<Integer, Training> trainingStorage;
 
     @Autowired
     public TrainingDAOImpl(Storage storage) {
         this.storage = storage;
-        this.trainingStorage = storage.getTrainings();
-        logger.info("TrainingDAOImpl initialized with Storage: {}", storage);
     }
 
     @Override
-    public void save(Training training) {
-        logger.info("Entering save() with training: {}", training);
+    public boolean save(Training training) {
         try {
-            storage.save(trainingStorage, training.getId(), training);
-            logger.info("Training saved successfully: {}", training);
+            storage.save(storage.getTrainings(), training.getId(), training);
+            return true;
         } catch (Exception e) {
             logger.error("Error saving training: {}", training, e);
-        } finally {
-            logger.info("Exiting save() with training: {}", training);
+            return false;
         }
     }
 
     @Override
-    public void update(int id, Training training) {
-        logger.info("Entering update() with id: {} and training: {}", id, training);
+    public boolean update(int id, Training training) {
         try {
-            storage.update(trainingStorage, id, training);
-            logger.info("Training updated successfully: {}", training);
+            storage.update(storage.getTrainings(), id, training);
+            return true;
         } catch (Exception e) {
             logger.error("Error updating training with id: {}", id, e);
-        } finally {
-            logger.info("Exiting update() with id: {}", id);
+            return false;
         }
     }
 
     @Override
-    public void delete(int id) {
-        logger.info("Entering delete() with id: {}", id);
+    public boolean delete(int id) {
         try {
-            storage.remove(trainingStorage, id);
-            logger.info("Training deleted successfully with id: {}", id);
+            storage.remove(storage.getTrainings(), id);
+            return true;
         } catch (Exception e) {
             logger.error("Error deleting training with id: {}", id, e);
-        } finally {
-            logger.info("Exiting delete() with id: {}", id);
+            return false;
         }
     }
 
     @Override
-    public Training findById(int id) {
-        logger.info("Entering findById() with id: {}", id);
+    public Optional<Training> findById(int id) {
         try {
-            Training training = storage.get(trainingStorage, id);
-            if (training != null) {
-                logger.info("Training found: {}", training);
-            } else {
+            Training training = storage.get(storage.getTrainings(), id);
+            if (training == null) {
                 logger.warn("No training found with id: {}", id);
+                throw new DaoException("No training found with id: " + id);
             }
-            return training;
+            return Optional.of(training);
         } catch (Exception e) {
             logger.error("Error finding training with id: {}", id, e);
-            return null;
-        } finally {
-            logger.info("Exiting findById() with id: {}", id);
+            throw new DaoException("Error finding training with id: " + id, e);
         }
     }
 
     @Override
-    public List<Training> findAll() {
-        logger.info("Entering findAll()");
+    public Optional<List<Training>> findAll() {
         try {
-            List<Training> trainings = storage.findAll(trainingStorage);
-            logger.info("Returning all trainings, count: {}", trainings.size());
-            return trainings;
+            List<Training> trainings = storage.findAll(storage.getTrainings());
+            if (trainings == null || trainings.isEmpty()) {
+                logger.warn("No trainings found.");
+                throw new DaoException("No trainings found.");
+            }
+            return Optional.of(trainings);
         } catch (Exception e) {
             logger.error("Error retrieving all trainings", e);
-            return null;
-        } finally {
-            logger.info("Exiting findAll()");
+            throw new DaoException("Error retrieving all trainings", e);
         }
     }
 }

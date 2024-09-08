@@ -1,6 +1,7 @@
 package com.example.crm_gym.dao;
 
 import com.example.crm_gym.config.AppConfig;
+import com.example.crm_gym.exception.DaoException;
 import com.example.crm_gym.models.Trainee;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -35,15 +37,15 @@ public class TraineeDaoTest {
         Trainee trainee = new Trainee(15, "Huye", "Benton", "Huye123@gmail.com", "pas11", true, formatter.parse("28-08-2024"), "York 26");
         traineeDAO.save(trainee);
 
-        Trainee found = traineeDAO.findById(15);
+        Optional<Trainee> found = traineeDAO.findById(15);
 
-        assertNotNull(found);
-        assertEquals("Huye", found.getFirstName());
-        assertEquals("Benton", found.getLastName());
-        assertEquals("Huye123@gmail.com", found.getUsername());
-        assertEquals("pas11", found.getPassword());
-        assertTrue(found.isActive());
-        assertEquals("York 26", found.getAddress());
+        assertTrue(found.isPresent());
+        assertEquals("Huye", found.get().getFirstName());
+        assertEquals("Benton", found.get().getLastName());
+        assertEquals("Huye123@gmail.com", found.get().getUsername());
+        assertEquals("pas11", found.get().getPassword());
+        assertTrue(found.get().isActive());
+        assertEquals("York 26", found.get().getAddress());
 
         Date parsedDate = formatter.parse("28-08-2024");
         Date expectedDate = trainee.getDateOfBirth();
@@ -58,14 +60,14 @@ public class TraineeDaoTest {
         Trainee updatedTrainee = new Trainee(15, "Huye", "Benton", "Huye123@gmail.com", "newpass", false, formatter.parse("28-08-2024"), "York 26");
         traineeDAO.update(15, updatedTrainee);
 
-        Trainee found = traineeDAO.findById(15);
-        assertNotNull(found);
-        assertEquals("Huye", found.getFirstName());
-        assertEquals("Benton", found.getLastName());
-        assertEquals("Huye123@gmail.com", found.getUsername());
-        assertEquals("newpass", found.getPassword());
-        assertFalse(found.isActive());
-        assertEquals("York 26", found.getAddress());
+        Optional<Trainee> found = traineeDAO.findById(15);
+        assertTrue(found.isPresent());
+        assertEquals("Huye", found.get().getFirstName());
+        assertEquals("Benton", found.get().getLastName());
+        assertEquals("Huye123@gmail.com", found.get().getUsername());
+        assertEquals("newpass", found.get().getPassword());
+        assertFalse(found.get().isActive());
+        assertEquals("York 26", found.get().getAddress());
         Date parsedDate = formatter.parse("28-08-2024");
         Date expectedDate = trainee.getDateOfBirth();
         assertEquals(parsedDate, expectedDate);
@@ -73,20 +75,29 @@ public class TraineeDaoTest {
 
     @Test
     void testDeleteTrainee() throws ParseException {
-        Trainee trainee = new Trainee(15, "Huye", "Benton", "Huye123@gmail.com", "pas11", true, formatter.parse("28-08-2024"), "York 26");
+        int userId = 15;
+        Trainee trainee = new Trainee(userId, "Huye", "Benton", "Huye.123", "pas11", true,
+                new SimpleDateFormat("yyyy-MM-dd").parse("2024-08-28"), "York 26");
         traineeDAO.save(trainee);
+        Optional<Trainee> foundBeforeDelete = traineeDAO.findById(userId);
+        assertTrue(foundBeforeDelete.isPresent());
 
-        traineeDAO.delete(15);
+        traineeDAO.delete(userId);
 
-        Trainee found = traineeDAO.findById(15);
-        assertNull(found);
+        DaoException exception = assertThrows(DaoException.class, () -> {
+            traineeDAO.findById(userId);
+        });
+
+        assertEquals("Error finding trainee with id: " + userId, exception.getMessage());
     }
 
     @Test
     void testFindAllTrainees() {
-        List<Trainee> trainees = traineeDAO.findAll();
+        Optional<List<Trainee>> optionalTrainees = traineeDAO.findAll();
+        assertTrue(optionalTrainees.isPresent());
+        List<Trainee> trainees = optionalTrainees.get();
         assertNotNull(trainees);
-        assertTrue(trainees.size() > 0);
+        assertFalse(trainees.isEmpty());
     }
 
 }

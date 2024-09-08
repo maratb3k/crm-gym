@@ -20,19 +20,16 @@ public class StorageConfig {
 
     @Bean(name = "trainerStorage")
     public Map<Integer, Trainer> trainerStorage() {
-        logger.info("Initializing trainerStorage bean");
         return new HashMap<>();
     }
 
     @Bean(name = "traineeStorage")
     public Map<Integer, Trainee> traineeStorage() {
-        logger.info("Initializing traineeStorage bean");
         return new HashMap<>();
     }
 
     @Bean(name = "trainingStorage")
     public Map<Integer, Training> trainingStorage() {
-        logger.info("Initializing trainingStorage bean");
         return new HashMap<>();
     }
 
