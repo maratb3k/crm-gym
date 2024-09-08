@@ -1,0 +1,12 @@
+Trainee, {"id":"1","firstName":"John","lastName":"Smith","username":"John.Smith","password":"password1","isActive":"true","dateOfBirth":"28-08-2024","address":"New York, St.Chicks 29"}
+Trainee, {"id":"2","firstName":"Jane","lastName":"Doe","username":"Jane.Doe","password":"password2","isActive":"true","dateOfBirth":"15-05-1995","address":"Los Angeles, Sun Blvd 12"}
+Trainee, {"id":"3","firstName":"Alice","lastName":"Johnson","username":"Alice.J","password":"password3","isActive":"true","dateOfBirth":"03-09-1998","address":"Chicago, Oak St 45"}
+Trainee, {"id":"4","firstName":"Bob","lastName":"Brown","username":"Bob.B","password":"password4","isActive":"true","dateOfBirth":"19-02-1988","address":"Houston, Pine St 78"}
+Trainer, {"id":"5","firstName":"Emily","lastName":"Clark","username":"Emily.Clark","password":"trainer1","isActive":"true","specialization":"Yoga"}
+Trainer, {"id":"6","firstName":"Michael","lastName":"Scott","username":"Michael.Scott","password":"trainer2","isActive":"true","specialization":"Weightlifting"}
+Trainer, {"id":"7","firstName":"Sarah","lastName":"Lee","username":"Sarah.Lee","password":"trainer3","isActive":"true","specialization":"HIIT"}
+Trainer, {"id":"8","firstName":"James","lastName":"Brown","username":"James.Brown","password":"trainer4","isActive":"true","specialization":"Pilates"}
+Training, {"id":"1","traineeId":"1","trainerId":"5","trainingName":"Yoga Basics","trainingType":"YOGA","trainingDate":"01-09-2024","trainingDuration":"60"}
+Training, {"id":"2","traineeId":"2","trainerId":"6","trainingName":"Advanced Weightlifting","trainingType":"FITNESS","trainingDate":"05-09-2024","trainingDuration":"90"}
+Training, {"id":"3","traineeId":"3","trainerId":"7","trainingName":"HIIT Cardio","trainingType":"CARDIO","trainingDate":"08-09-2024","trainingDuration":"45"}
+Training, {"id":"4","traineeId":"4","trainerId":"8","trainingName":"Pilates for Beginners","trainingType":"PILATES","trainingDate":"10-09-2024","trainingDuration":"30"}
