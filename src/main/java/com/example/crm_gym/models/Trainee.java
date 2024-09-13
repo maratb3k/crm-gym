@@ -1,15 +1,56 @@
 package com.example.crm_gym.models;
 
-import java.util.Date;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Size;
 
-public class Trainee extends User {
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
+
+@Entity
+@Table(name = "trainees")
+public class Trainee {
+    @Id
+    @GeneratedValue(strategy=GenerationType.AUTO)
+    private Long id;
+
+    @Column(name = "date_of_birth")
+    @Temporal(TemporalType.DATE)
     private Date dateOfBirth;
+
+    @Column
+    @Size(min = 10, max = 255, message = "Address name must be between 10 and 255 characters")
     private String address;
 
-    public Trainee(int id, String firstName, String lastName, String username, String password, boolean isActive, Date dateOfBirth, String address) {
-        super(id, firstName, lastName, username, password, isActive);
+    @OneToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @ManyToMany
+    @JoinTable(
+            name = "trainee_trainer",
+            joinColumns = @JoinColumn(name = "trainee_id"),
+            inverseJoinColumns = @JoinColumn(name = "trainer_id")
+    )
+    private Set<Trainer> trainers = new HashSet<>();
+
+    @OneToMany(mappedBy = "trainee", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private Set<Training> trainings = new HashSet<>();
+
+    public Trainee(){
+    }
+
+    public Trainee(User user) {
+        this.user = user;
+    }
+
+    public Trainee(Date dateOfBirth, String address) {
         this.dateOfBirth = dateOfBirth;
         this.address = address;
+    }
+
+    public Long getId() {
+        return id;
     }
 
     public Date getDateOfBirth() {
@@ -20,6 +61,14 @@ public class Trainee extends User {
         return address;
     }
 
+    public User getUser() {
+        return user;
+    }
+
+    public Set<Trainer> getTrainers() {
+        return trainers;
+    }
+
     public void setDateOfBirth(Date dateOfBirth) {
         this.dateOfBirth = dateOfBirth;
     }
@@ -28,17 +77,31 @@ public class Trainee extends User {
         this.address = address;
     }
 
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public void setTrainers(Set<Trainer> trainers) {
+        this.trainers = trainers;
+    }
+
+    public Set<Training> getTrainings() {
+        return trainings;
+    }
+
+    public void setTrainings(Set<Training> trainings) {
+        this.trainings = trainings;
+    }
+
     @Override
     public String toString() {
         return "Trainee{" +
-                "userId=" + getUserId() +
-                ", firstName='" + getFirstName() + '\'' +
-                ", lastName='" + getLastName() + '\'' +
-                ", username='" + getUsername() + '\'' +
-                ", password='" + getPassword() + '\'' +
-                ", isActive=" + isActive() +
+                "id=" + id +
                 ", dateOfBirth=" + dateOfBirth +
                 ", address='" + address + '\'' +
+                ", user=" + user +
+                ", trainers=" + trainers +
+                ", trainings=" + trainings +
                 '}';
     }
 }
