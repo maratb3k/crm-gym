@@ -1,68 +1,98 @@
 package com.example.crm_gym.models;
 
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Size;
+
 import java.util.Date;
+import java.util.Set;
+import java.util.HashSet;
 
+@Entity
+@Table(name = "trainings")
 public class Training {
-    private int id;
-    private int traineeId;
-    private int trainerId;
-    private String trainingName;
-    private TrainingType trainingType;
-    private Date trainingDate;
-    private String trainingDuration;
+    @Id
+    @GeneratedValue(strategy= GenerationType.AUTO)
+    private Long id;
 
-    public Training(int id, int traineeId, int trainerId, String trainingName, TrainingType trainingType, Date trainingDate, String trainingDuration) {
-        this.id = id;
-        this.traineeId = traineeId;
-        this.trainerId = trainerId;
+    @ManyToOne
+    @JoinColumn(name = "trainee_id")
+    private Trainee trainee;
+
+    @ManyToOne
+    @JoinColumn(name = "trainer_id")
+    private Trainer trainer;
+
+    @Column(name = "training_name", nullable = false)
+    @Size(min = 5, max = 255, message = "Training name must be between 5 and 255 characters")
+    private String trainingName;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "training_type_id", nullable = false)
+    private TrainingType trainingType;
+
+    @Temporal(TemporalType.DATE)
+    @Column(name = "training_date", nullable = false)
+    private Date trainingDate;
+
+    @Column(name = "training_duration", nullable = false)
+    private int trainingDuration;
+
+    public Training() {}
+
+    public Training(String trainingName, TrainingType trainingType, Date trainingDate, int trainingDuration) {
         this.trainingName = trainingName;
         this.trainingType = trainingType;
         this.trainingDate = trainingDate;
         this.trainingDuration = trainingDuration;
     }
 
-    public int getId() {
+    public Training(Trainee trainee, Trainer trainer, String trainingName, TrainingType trainingType, Date trainingDate, int trainingDuration) {
+        this.trainee = trainee;
+        this.trainer = trainer;
+        this.trainingName = trainingName;
+        this.trainingType = trainingType;
+        this.trainingDate = trainingDate;
+        this.trainingDuration = trainingDuration;
+    }
+
+    public Long getId() {
         return id;
     }
 
-    public int getTraineeId() {
-        return traineeId;
+    public Trainee getTrainee() {
+        return trainee;
     }
 
-    public int getTrainerId() {
-        return trainerId;
-    }
-
-    public String getTrainingName() {
-        return trainingName;
+    public Trainer getTrainer() {
+        return trainer;
     }
 
     public TrainingType getTrainingType() {
         return trainingType;
     }
 
+    public String getTrainingName() {
+        return trainingName;
+    }
+
     public Date getTrainingDate() {
         return trainingDate;
     }
 
-    public String getTrainingDuration() {
+    public int getTrainingDuration() {
         return trainingDuration;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public void setTraineeId(int traineeId) {
-        this.traineeId = traineeId;
-    }
-
-    public void setTrainerId(int trainerId) {
-        this.trainerId = trainerId;
     }
 
     public void setTrainingName(String trainingName) {
         this.trainingName = trainingName;
+    }
+
+    public void setTrainee(Trainee trainee) {
+        this.trainee = trainee;
+    }
+
+    public void setTrainer(Trainer trainer) {
+        this.trainer = trainer;
     }
 
     public void setTrainingType(TrainingType trainingType) {
@@ -73,7 +103,20 @@ public class Training {
         this.trainingDate = trainingDate;
     }
 
-    public void setTrainingDuration(String trainingDuration) {
+    public void setTrainingDuration(int trainingDuration) {
         this.trainingDuration = trainingDuration;
+    }
+
+    @Override
+    public String toString() {
+        return "Training{" +
+                "id=" + id +
+                ", trainee=" + trainee +
+                ", trainer=" + trainer +
+                ", trainingName='" + trainingName + '\'' +
+                ", trainingType=" + trainingType +
+                ", trainingDate=" + trainingDate +
+                ", trainingDuration=" + trainingDuration +
+                '}';
     }
 }

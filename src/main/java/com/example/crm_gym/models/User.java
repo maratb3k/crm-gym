@@ -1,15 +1,44 @@
 package com.example.crm_gym.models;
 
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
+@Entity
+@Table(name = "users")
 public class User {
-    private int userId;
+    @Id
+    @GeneratedValue(strategy= GenerationType.AUTO)
+    private Long userId;
+
+    @Column(name = "first_name", nullable = false)
+    @Size(min = 5, max = 255, message = "First name must be between 5 and 255 characters")
+    @NotNull(message = "First Name is required")
     private String firstName;
+
+    @Column(name = "last_name", nullable = false)
+    @Size(min = 5, max = 255, message = "Last name must be between 5 and 255 characters")
+    @NotNull(message = "Last Name is required")
     private String lastName;
+
+    @Column(nullable = false, unique = true)
     private String username;
+
+    @Column(nullable = false)
     private String password;
+
+    @Column(name = "is_active", nullable = false)
     private boolean isActive;
 
-    public User(int userId, String firstName, String lastName, String username, String password, boolean isActive) {
-        this.userId = userId;
+    @OneToOne(mappedBy = "user")
+    private Trainee trainee;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private Trainer trainer;
+
+    public User() {}
+
+    public User(String firstName, String lastName, String username, String password, boolean isActive) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.username = username;
@@ -17,7 +46,7 @@ public class User {
         this.isActive = isActive;
     }
 
-    public int getUserId() {
+    public Long getUserId() {
         return userId;
     }
 
@@ -41,7 +70,15 @@ public class User {
         return isActive;
     }
 
-    public void setUserId(int userId) {
+    public Trainee getTrainee() {
+        return trainee;
+    }
+
+    public Trainer getTrainer() {
+        return trainer;
+    }
+
+    public void setUserId(Long userId) {
         this.userId = userId;
     }
 
@@ -63,5 +100,27 @@ public class User {
 
     public void setActive(boolean active) {
         isActive = active;
+    }
+
+    public void setTrainee(Trainee trainee) {
+        this.trainee = trainee;
+    }
+
+    public void setTrainer(Trainer trainer) {
+        this.trainer = trainer;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "userId=" + userId +
+                ", firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
+                ", username='" + username + '\'' +
+                ", password='" + password + '\'' +
+                ", isActive=" + isActive +
+                ", trainee=" + trainee +
+                ", trainer=" + trainer +
+                '}';
     }
 }
