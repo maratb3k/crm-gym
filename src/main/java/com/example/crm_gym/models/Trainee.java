@@ -49,6 +49,12 @@ public class Trainee {
         this.address = address;
     }
 
+    public Trainee(Date dateOfBirth, String address, User user) {
+        this.dateOfBirth = dateOfBirth;
+        this.address = address;
+        this.user = user;
+    }
+
     public Long getId() {
         return id;
     }

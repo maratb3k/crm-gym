@@ -83,6 +83,10 @@ public class Training {
         return trainingDuration;
     }
 
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     public void setTrainingName(String trainingName) {
         this.trainingName = trainingName;
     }

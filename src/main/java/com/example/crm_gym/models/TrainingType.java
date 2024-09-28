@@ -41,6 +41,10 @@ public class TrainingType {
         return name;
     }
 
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     public void setName(TrainingTypeName name) {
         this.name = name;
     }

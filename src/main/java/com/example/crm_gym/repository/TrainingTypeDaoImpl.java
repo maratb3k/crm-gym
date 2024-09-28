@@ -27,58 +27,37 @@ public class TrainingTypeDaoImpl implements TrainingTypeDAO {
     }
 
     @Override
-    public boolean save(TrainingType trainingType) {
+    public Optional<TrainingType> save(TrainingType trainingType) {
         try {
             entityManager.persist(trainingType);
-            return true;
+            return Optional.of(trainingType);
         } catch (Exception e) {
             log.error("Error saving training type: {}", trainingType, e);
-            return false;
+            throw new DaoException("Error saving trainee: " + trainingType, e);
         }
     }
 
     @Override
-    public boolean update(Long id, TrainingType updatedTrainingType) {
+    public Optional<TrainingType> update(TrainingType updatedTrainingType) {
         try {
-            TrainingType existingTrainingType = entityManager.find(TrainingType.class, id);
-            if (existingTrainingType != null) {
-                if (updatedTrainingType.getName() != null) {
-                    existingTrainingType.setName(updatedTrainingType.getName());
-                }
-                if (updatedTrainingType.getTrainers() != null && !updatedTrainingType.getTrainers().isEmpty()) {
-                    existingTrainingType.setTrainers(updatedTrainingType.getTrainers());
-                }
-                if (updatedTrainingType.getTrainings() != null && !updatedTrainingType.getTrainings().isEmpty()) {
-                    existingTrainingType.setTrainings(updatedTrainingType.getTrainings());
-                }
-                entityManager.merge(existingTrainingType);
-                entityManager.flush();
-                return true;
-            } else {
-                log.error("Training type with id {} not found.", id);
-                return false;
-            }
+            entityManager.merge(updatedTrainingType);
+            entityManager.flush();
+            return Optional.of(updatedTrainingType);
         } catch (Exception e) {
-            log.error("Error updating training type with id: {}", id, e);
-            throw new DaoException("Error updating training type with id " + id, e);
+            log.error("Error updating training type with id: {}", updatedTrainingType.getId(), e);
+            throw new DaoException("Error updating training type with id " + updatedTrainingType.getId(), e);
         }
     }
 
     @Override
-    public boolean delete(Long id) {
+    public boolean delete(TrainingType trainingType) {
         try {
-            String hql = "DELETE FROM TrainingType t WHERE t.id = :id";
-            int deletedCount = entityManager.createQuery(hql)
-                    .setParameter("id", id)
-                    .executeUpdate();
-            if (deletedCount > 0) {
-                return true;
-            }
+            entityManager.remove(trainingType);
+            return true;
         } catch (Exception e) {
-            throw new DaoException("Error deleting training type with id " + id, e);
+            log.error("Error deleting training type with id: {}", trainingType.getId(), e);
+            throw new DaoException("Error deleting training type with id " + trainingType.getId(), e);
         }
-        log.error("Error deleting training type with id: {}", id);
-        return false;
     }
 
     @Override
@@ -87,6 +66,7 @@ public class TrainingTypeDaoImpl implements TrainingTypeDAO {
             TrainingType trainingType = entityManager.find(TrainingType.class, id);
             return Optional.ofNullable(trainingType);
         } catch (Exception e) {
+            log.error("Error finding training type with id: {}", id, e);
             throw new DaoException("Error finding training type with id " + id, e);
         }
     }
@@ -98,6 +78,7 @@ public class TrainingTypeDaoImpl implements TrainingTypeDAO {
             List<TrainingType> trainingTypes = entityManager.createQuery(hql, TrainingType.class).getResultList();
             return Optional.ofNullable(trainingTypes);
         } catch (Exception e) {
+            log.error("Error finding training type list", e);
             throw new DaoException("Error finding training types", e);
         }
     }

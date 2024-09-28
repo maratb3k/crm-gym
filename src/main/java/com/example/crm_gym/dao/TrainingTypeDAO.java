@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface TrainingTypeDAO {
-    boolean save(TrainingType trainingType);
-    boolean update(Long id, TrainingType trainingType);
-    boolean delete(Long id);
+    Optional<TrainingType> save(TrainingType trainingType);
+    Optional<TrainingType> update(TrainingType updatedTrainingType);
+    boolean delete(TrainingType trainingType);
     Optional<TrainingType> findById(Long id);
     Optional<List<TrainingType>> findAll();
 }

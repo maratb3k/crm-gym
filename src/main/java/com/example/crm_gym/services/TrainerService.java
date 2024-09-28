@@ -1,19 +1,16 @@
 package com.example.crm_gym.services;
 
-import com.example.crm_gym.dao.TrainerDAO;
-import com.example.crm_gym.dao.UserDAO;
-import com.example.crm_gym.exception.DaoException;
+import com.example.crm_gym.dao.*;
+import com.example.crm_gym.exception.*;
 import com.example.crm_gym.models.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 @Slf4j
 @Transactional
@@ -21,231 +18,177 @@ import java.util.Set;
 public class TrainerService {
 
     private TrainerDAO trainerDAO;
+    private TraineeDAO traineeDAO;
     private UserDAO userDAO;
+    private TrainingTypeDAO trainingTypeDao;
+    private TrainingDAO trainingDao;
 
     @Autowired
-    public TrainerService(TrainerDAO trainerDAO, UserDAO userDAO) {
+    public TrainerService(TrainerDAO trainerDAO, UserDAO userDAO, TrainingTypeDAO trainingTypeDAO, TraineeDAO traineeDAO, TrainingDAO trainingDao) {
         this.trainerDAO = trainerDAO;
         this.userDAO = userDAO;
+        this.trainingTypeDao = trainingTypeDAO;
+        this.traineeDAO = traineeDAO;
+        this.trainingDao = trainingDao;
     }
 
-    public boolean create(TrainingType specialization) {
+    public Optional<Trainer> create(String firstName, String lastName, Long specializationId) {
         try {
-            Trainer trainer = new Trainer(specialization);
-            System.out.println(trainer.getSpecialization());
+            TrainingType trainingType = trainingTypeDao.findById(specializationId)
+                    .orElseThrow(() -> new ServiceException("Training type not found"));
+            User user = new User(firstName, lastName);
+            Trainer trainer = new Trainer(trainingType, user);
             return trainerDAO.save(trainer);
-        } catch (DaoException e) {
+        } catch (Exception e) {
             log.error("Error creating trainer", e);
-            return false;
+            throw new ServiceException("Error creating trainer", e);
         }
     }
 
-    public boolean update(String username, String password, Long id, Trainer trainer) {
+    public Optional<Trainer> update(Trainer updatedTrainer) {
         try {
-            if (!userDAO.checkUsernameAndPassword(username, password)) {
-                log.error("Invalid credentials for user {}", username);
-                return false;
+            Trainer existingTrainer = trainerDAO.findById(updatedTrainer.getId())
+                    .orElseThrow(() -> new ServiceException("Trainer not found"));
+            User updatedUser = updatedTrainer.getUser();
+            Optional<User> newUser = userDAO.update(updatedUser);
+            if (newUser.isPresent()) {
+                existingTrainer.setUser(newUser.get());
             }
-            return trainerDAO.update(id, trainer);
-        } catch (DaoException e) {
-            log.error("Error updating trainer with id {}: {}", id, e);
-            return false;
+            existingTrainer.setSpecialization(updatedTrainer.getSpecialization());
+            return trainerDAO.update(existingTrainer);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid or empty input data for trainer update: {}", e.getMessage());
+            throw new ServiceException("Invalid or empty input data for trainer update");
+        } catch (Exception e) {
+            log.error("Error updating trainer with id {}: {}", updatedTrainer.getId(), e);
+            throw new ServiceException("Error updating trainer with id " + updatedTrainer.getId());
         }
     }
 
-    public boolean updatePassword(String username, String password, Long id, String newPassword) {
+    public boolean updatePassword(Long id, String newPassword) {
         try {
-            if (!userDAO.checkUsernameAndPassword(username, password)) {
-                log.error("Invalid credentials for user {}", username);
-                return false;
-            }
-            boolean result = trainerDAO.updatePassword(id, newPassword);
-            if (!result) {
-                log.error("Failed to update password for trainer with id: {}", id);
-                return false;
+            Trainer trainer = trainerDAO.findById(id)
+                    .orElseThrow(() -> new ServiceException("Trainer not found"));
+            trainer.getUser().setPassword(newPassword);
+            Optional<Trainer> result = trainerDAO.update(trainer);
+            if (!result.isPresent()) {
+                throw new ServiceException("Password not updated");
             }
             return true;
-        } catch (DaoException e) {
+        } catch (Exception e) {
             log.error("Error updating password for trainer with id: {}", id, e);
-            return false;
+            throw new ServiceException("Error updating password for trainer with id " + id);
+        }
+    }
+
+    public boolean delete(Trainer trainer) {
+        try {
+            return trainerDAO.delete(trainer);
         } catch (Exception e) {
-            log.error("Unexpected error occurred while updating password for trainer with id: {}", id, e);
-            return false;
+            log.error("Error deleting trainer with id {}", trainer.getId(), e);
+            throw new ServiceException("Error deleting trainer with id " + trainer.getId());
         }
     }
 
-    public boolean updateTrainerUser(String username, String password, Long trainerId, Long userId) {
+    public boolean deleteByUsername(String username) {
         try {
-            if (!userDAO.checkUsernameAndPassword(username, password)) {
-                log.error("Invalid credentials for user {}", username);
-                return false;
-            }
-
-            boolean result = trainerDAO.updateTrainerUser(trainerId, userId);
-            if (!result) {
-                log.error("Failed to add or update user with id " + userId + " for trainer with id: {}", trainerId);
-                return false;
-            }
-            return true;
-        } catch (DaoException e) {
-            log.error("Error adding or updating user for trainer with id: {}", trainerId, e);
-            return false;
-        } catch (Exception e) {
-            log.error("Unexpected error occurred while adding or updating user for trainer with id: {}", trainerId, e);
-            return false;
-        }
-    }
-
-    public boolean delete(String username, String password, Long id) {
-        try {
-            if (!userDAO.checkUsernameAndPassword(username, password)) {
-                log.error("Invalid credentials for user {}", username);
-                return false;
-            }
-            return trainerDAO.delete(id);
-        } catch (DaoException e) {
-            log.error("Error deleting trainer with id {}", id, e);
-            return false;
-        }
-    }
-
-    public boolean deleteByUsername(String username, String password) {
-        try {
-            if (!userDAO.checkUsernameAndPassword(username, password)) {
-                log.error("Invalid credentials for user {}", username);
-                return false;
-            }
             boolean result = trainerDAO.deleteByUsername(username);
             if (!result) {
                 log.error("Failed to delete trainer associated with username: {}", username);
-                return false;
+                throw new ServiceException("Failed to delete trainer associated with username: " + username);
             }
             return true;
-        } catch (DaoException e) {
+        } catch (Exception e) {
             log.error("Error deleting trainer by username: {}", username, e);
-            return false;
-        } catch (Exception e) {
-            log.error("Unexpected error occurred while deleting trainer by username: {}", username, e);
-            return false;
-        }
-    }
-
-    public boolean deleteTrainerUser(String username, String password, Long trainerId) {
-        try {
-            if (!userDAO.checkUsernameAndPassword(username, password)) {
-                log.error("Invalid credentials for user {}", username);
-                return false;
-            }
-
-            boolean result = trainerDAO.deleteTrainerUser(trainerId);
-            if (!result) {
-                log.error("Failed to delete user for trainer with id: {}", trainerId);
-                return false;
-            }
-            return true;
-        } catch (DaoException e) {
-            log.error("Error deleting user for trainer with id: {}", trainerId, e);
-            return false;
-        } catch (Exception e) {
-            log.error("Unexpected error occurred while deleting user for trainer with id: {}", trainerId, e);
-            return false;
+            throw new ServiceException("Error deleting trainer by username: " + username);
         }
     }
 
     public Optional<Trainer> getTrainerById(String username, String password, Long id) {
         try {
-            if (!userDAO.checkUsernameAndPassword(username, password)) {
-                log.error("Invalid credentials for user {}", username);
-                return Optional.empty();
-            }
             return trainerDAO.findById(id);
-        } catch (DaoException e) {
+        } catch (Exception e) {
             log.error("Error fetching trainer with id: {}", id, e);
-            return Optional.empty();
-        } catch (Exception e) {
-            log.error("Unexpected error occurred while fetching trainer with id: {}", id, e);
-            return Optional.empty();
+            throw new ServiceException("Error fetching trainer with id: " + id);
         }
     }
 
-    public Optional<Trainer> getTrainerByUsername(String username, String password) {
+    public Optional<Trainer> getTrainerByUsername(String username) {
         try {
-            if (!userDAO.checkUsernameAndPassword(username, password)) {
-                log.error("Invalid credentials for user {}", username);
-                return Optional.empty();
-            }
             return trainerDAO.findByUsername(username);
-        } catch (DaoException e) {
+        } catch (Exception e) {
             log.error("Error fetching trainer by username: {}", username, e);
-            return Optional.empty();
-        } catch (Exception e) {
-            log.error("Unexpected error occurred while fetching trainer by username: {}", username, e);
-            return Optional.empty();
+            throw new ServiceException("Error fetching trainer by username: " + username);
         }
     }
 
-    public Optional<List<Trainer>> getAllTrainers(String username, String password) {
+    public Optional<List<Trainer>> getAllTrainers() {
         try {
-            if (!userDAO.checkUsernameAndPassword(username, password)) {
-                log.error("Invalid credentials for user {}", username);
-                return Optional.empty();
-            }
             return trainerDAO.findAll();
-        } catch (DaoException e) {
-            log.error("Error fetching all trainers", e);
-            return Optional.empty();
         } catch (Exception e) {
-            log.error("Unexpected error occurred while fetching all trainers", e);
-            return Optional.empty();
+            log.error("Error fetching all trainers", e);
+            throw new ServiceException("Error fetching all trainers");
         }
     }
 
-    public Optional<List<Training>> getTrainingsByTrainerUsernameAndCriteria(String username, String password, Date fromDate, Date toDate, String traineeName) {
+    public Optional<List<Training>> getTrainingsByTrainerUsernameAndCriteria(String username, Date fromDate, Date toDate, String traineeName) {
         try {
-            if (!userDAO.checkUsernameAndPassword(username, password)) {
-                log.error("Invalid credentials for user {}", username);
-                return Optional.empty();
-            }
             return trainerDAO.findTrainingsByTrainerUsernameAndCriteria(username, fromDate, toDate, traineeName);
-        } catch (DaoException e) {
+        } catch (Exception e) {
             log.error("Error retrieving trainings for trainer with username: {}", username, e);
-            return Optional.empty();
+            throw new ServiceException("Error retrieving trainings for trainer with username: " + username);
         }
     }
 
     public boolean addTrainee(Long trainerId, Long traineeId) {
         try {
-            return trainerDAO.addTrainee(trainerId, traineeId);
-        } catch (DaoException e) {
+            Trainer existingTrainer = trainerDAO.findById(trainerId)
+                    .orElseThrow(() -> new ServiceException("Trainer not found"));
+            Trainee existingTrainee = traineeDAO.findById(traineeId)
+                    .orElseThrow(() -> new ServiceException("Trainee not found"));
+            return trainerDAO.addTrainee(existingTrainer, existingTrainee);
+        } catch (Exception e) {
             log.error("Error adding trainee with id {} to trainer with id {}: {}", traineeId, trainerId, e.getMessage());
-            return false;
+            throw new ServiceException("Error adding trainee with id " + traineeId);
         }
     }
 
     public boolean addTraining(Long trainerId, Long trainingId) {
         try {
-            return trainerDAO.addTraining(trainerId, trainingId);
-        } catch (DaoException e) {
+            Trainer existingTrainer = trainerDAO.findById(trainerId)
+                    .orElseThrow(() -> new ServiceException("Trainer not found"));
+            Training existingTraining = trainingDao.findById(trainingId)
+                    .orElseThrow(() -> new ServiceException("Trainer not found"));
+            return trainerDAO.addTraining(existingTrainer, existingTraining);
+        } catch (Exception e) {
             log.error("Error adding training with id {} to trainer with id {}: {}", trainingId, trainerId, e.getMessage());
-            return false;
+            throw new ServiceException("Error adding training with id " + trainingId);
         }
     }
 
     public boolean deleteTraineeFromList(Long trainerId, Long traineeId) {
         try {
-            return trainerDAO.deleteTraineeFromList(trainerId, traineeId);
-        } catch (DaoException e) {
+            Trainee trainee = traineeDAO.findById(traineeId)
+                    .orElseThrow(() -> new ServiceException("Trainee not found"));
+            Trainer trainer = trainerDAO.findById(trainerId)
+                    .orElseThrow(() -> new ServiceException("Trainer not found"));
+            return trainerDAO.deleteTraineeFromList(trainer, trainee);
+        } catch (Exception e) {
             log.error("Error removing trainee with id {} from trainer with id {}: {}", traineeId, trainerId, e.getMessage());
-            return false;
+            throw new ServiceException("Error removing trainee with id " + traineeId);
         }
     }
 
     public boolean deleteTrainingFromList(Long trainerId, Long trainingId) {
         try {
-            return trainerDAO.deleteTrainingFromList(trainerId, trainingId);
-        } catch (DaoException e) {
+            Trainer trainer = trainerDAO.findById(trainerId)
+                    .orElseThrow(() -> new ServiceException("Trainer not found"));
+            Training training = trainingDao.findById(trainingId)
+                    .orElseThrow(() -> new ServiceException("Trainer not found"));
+            return trainerDAO.deleteTrainingFromList(trainer, training);
+        } catch (Exception e) {
             log.error("Error removing training with id {} from trainer with id {}: {}", trainingId, trainerId, e.getMessage());
-            return false;
+            throw new ServiceException("Error removing training with id " + trainingId);
         }
     }
 

@@ -11,18 +11,14 @@ import java.util.Optional;
 import java.util.Set;
 
 public interface TraineeDAO {
-    boolean save(Trainee trainee);
-    boolean addTrainer(Long traineeId, Long trainerId);
-    boolean addTraining(Long traineeId, Long trainingId);
-    boolean update(Long id, Trainee trainee);
-    boolean updatePassword(Long id, String newPassword);
-    boolean updateTrainersList(Long id, Set<Trainer> trainers);
-    boolean updateTraineeUser(Long traineeId, Long userId);
-    boolean delete(Long id);
+    Optional<Trainee> save(Trainee trainee);
+    boolean addTrainer(Trainee trainee, Trainer trainer);
+    boolean addTraining(Trainee trainee, Training training);
+    Optional<Trainee> update(Trainee updatedTrainee);
+    boolean delete(Trainee trainee);
     boolean deleteByUsername(String username);
-    boolean deleteTraineeUser(Long traineeId);
-    boolean deleteTrainerFromList(Long traineeId, Long trainerId);
-    boolean deleteTrainingFromList(Long traineeId, Long trainingId);
+    boolean deleteTrainerFromList(Trainee trainee, Trainer trainer);
+    boolean deleteTrainingFromList(Trainee trainee, Training training);
     Optional<Trainee> findById(Long id);
     Optional<Trainee> findByUsername(String username);
     Optional<List<Trainer>> findTrainersNotAssignedToTraineeByUsername(String traineeUsername);

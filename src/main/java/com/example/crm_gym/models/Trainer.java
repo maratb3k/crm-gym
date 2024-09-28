@@ -32,6 +32,11 @@ public class Trainer {
         this.specialization = specialization;
     }
 
+    public Trainer(TrainingType specialization, User user) {
+        this.specialization = specialization;
+        this.user = user;
+    }
+
     public Trainer(TrainingType specialization, User user, Set<Trainee> trainees, Set<Training> trainings) {
         this.specialization = specialization;
         this.user = user;

@@ -39,9 +39,9 @@ public class CrmGymApplication {
 		//System.out.println(traineeService.updateTraineeUser("Sarah.Lee", "lKrgfODBrB", optionalTrainer.get().getId(), optUser.get().getUserId()));
  		//System.out.println(trainerService.getTrainingsByTrainerUsernameAndCriteria("Sarah.Lee", "lKrgfODBrB", new Date(2024, 9, 10), new Date(2024, 9, 15), optionalTrainee.get().getUser().getUsername()));
 
-		System.out.println(trainingService.create("cardio group 1", trainingType.get(), new Date(2024, 9, 25), 60));
+		//System.out.println(trainingService.create("cardio group 1", trainingType.get(), new Date(2024, 9, 25), 60));
 
-		context.close();
+		//context.close();
 	}
 
 }

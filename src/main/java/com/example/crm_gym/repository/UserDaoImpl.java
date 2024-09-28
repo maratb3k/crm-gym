@@ -26,90 +26,37 @@ public class UserDaoImpl implements UserDAO {
     }
 
     @Override
-    public boolean save(User user) {
+    public Optional<User> save(User user) {
         try {
             entityManager.persist(user);
-            return true;
+            return Optional.of(user);
         } catch (Exception e) {
             log.error("Error saving user: {}", user, e);
-            return false;
+            throw new DaoException("Error saving user: " + user, e);
         }
     }
 
     @Override
-    public boolean update(Long id, User updatedUser) {
+    public Optional<User> update(User updatedUser) {
         try {
-            User existingUser = entityManager.find(User.class, id);
-            if (existingUser != null) {
-                existingUser.setFirstName(updatedUser.getFirstName());
-                existingUser.setLastName(updatedUser.getLastName());
-                existingUser.setUsername(updatedUser.getUsername());
-                existingUser.setPassword(updatedUser.getPassword());
-                existingUser.setActive(updatedUser.isActive());
-                entityManager.merge(existingUser);
-                entityManager.flush();
-                return true;
-            } else {
-                log.error("User with id {} not found.", id);
-                return false;
-            }
+            entityManager.merge(updatedUser);
+            entityManager.flush();
+            return Optional.of(updatedUser);
         } catch (Exception e) {
-            log.error("Error updating user with id: {}", id, e);
-            throw new DaoException("Error updating user with id " + id, e);
+            log.error("Error updating user with id: {}", updatedUser.getUserId(), e);
+            throw new DaoException("Error updating user with id " + updatedUser.getUserId(), e);
         }
     }
 
     @Override
-    public boolean updatePassword(Long id, String newPassword) {
+    public boolean delete(User user) {
         try {
-            User user = entityManager.find(User.class, id);
-            if (user != null) {
-                user.setPassword(newPassword);
-                entityManager.merge(user);
-                return true;
-            } else {
-                log.error("Error updating user password. User with id: {} not found.", id);
-                return false;
-            }
+            entityManager.remove(user);
+            return true;
         } catch (Exception e) {
-            log.error("Error updating user password. User with id: {} not found.", id);
-            throw new DaoException("Error updating user password with id " + id, e);
+            log.error("Error deleting user with id: {}", user.getUserId(), e);
+            throw new DaoException("Error deleting user with id " + user.getUserId(), e);
         }
-    }
-
-    @Override
-    public boolean updateUserIsActive(Long id, boolean isActive) {
-        try {
-            User user = entityManager.find(User.class, id);
-            if (user != null) {
-                user.setActive(isActive);
-                entityManager.merge(user);
-                return true;
-            } else {
-                log.error("Error updating user 'isActive' field. User with id: {} not found.", id);
-                return false;
-            }
-        } catch (Exception e) {
-            log.error("Error updating user 'isActive' field. User with id: {} not found.", id);
-            throw new DaoException("Error updating user 'isActive' field with id " + id, e);
-        }
-    }
-
-    @Override
-    public boolean delete(Long id) {
-        try {
-            String hql = "DELETE FROM User u WHERE u.userId = :id";
-            int deletedCount = entityManager.createQuery(hql)
-                    .setParameter("id", id)
-                    .executeUpdate();
-            if (deletedCount > 0) {
-                return true;
-            }
-        } catch (Exception e) {
-            log.error("Error deleting user with id: {}", id);
-            throw new DaoException("Error deleting user with id " + id, e);
-        }
-        return false;
     }
 
     @Override
@@ -125,7 +72,7 @@ public class UserDaoImpl implements UserDAO {
                 return true;
             } else {
                 log.error("User with username {} not found", username);
-                return false;
+                throw new DaoException("User with username " + username + " not found");
             }
         } catch (Exception e) {
             log.error("Error deleting user by username " + username, e);
@@ -154,7 +101,7 @@ public class UserDaoImpl implements UserDAO {
             return Optional.ofNullable(user);
         } catch (NoResultException e) {
             log.warn("No user found with username: {}", username);
-            return Optional.empty();
+           throw new DaoException("No user found with username " + username, e);
         } catch (Exception e) {
             log.error("Error finding user with username " + username, e);
             throw new DaoException("Error finding user with username " + username, e);
@@ -186,6 +133,9 @@ public class UserDaoImpl implements UserDAO {
                 return false;
             }
             return true;
+        } catch (NoResultException e) {
+            log.warn("user not found with username: {}", username, e);
+            throw new DaoException("user not found with username: " + username, e);
         } catch (Exception e) {
             log.error("Error checking username and password", e);
             throw new DaoException("Error checking username and password. Username: " + username, e);

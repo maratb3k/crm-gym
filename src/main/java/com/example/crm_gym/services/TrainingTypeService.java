@@ -3,6 +3,7 @@ package com.example.crm_gym.services;
 import com.example.crm_gym.dao.TrainingTypeDAO;
 import com.example.crm_gym.dao.UserDAO;
 import com.example.crm_gym.exception.DaoException;
+import com.example.crm_gym.exception.ServiceException;
 import com.example.crm_gym.models.*;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -25,71 +26,59 @@ public class TrainingTypeService {
         this.userDAO = userDAO;
     }
 
-    public boolean create(TrainingTypeName name) {
+    public Optional<TrainingType> create(TrainingTypeName name) {
         try {
             TrainingType trainingType = new TrainingType(name);
-            return trainingTypeDAO.save(trainingType);
-        } catch (DaoException e) {
+            Optional<TrainingType> savedTrainingType = trainingTypeDAO.save(trainingType);
+            return savedTrainingType;
+        } catch (Exception e) {
             log.error("Error creating training type", e);
-            return false;
+            throw new ServiceException("Error creating training type", e);
         }
     }
 
-    public boolean update(String username, String password, Long id, TrainingType trainingType) {
+    public Optional<TrainingType> update(TrainingType newTrainingType) {
         try {
-            if (!userDAO.checkUsernameAndPassword(username, password)) {
-                log.error("Invalid credentials for user {}", username);
-                return false;
-            }
-            return trainingTypeDAO.update(id, trainingType);
-        } catch (DaoException e) {
-            log.error("Error updating training type with id {}: {}", id, e);
-            return false;
+            trainingTypeDAO.findById(newTrainingType.getId())
+                    .orElseThrow(() -> new ServiceException("Training type not found"));
+            return trainingTypeDAO.update(newTrainingType);
+        } catch (Exception e) {
+            log.error("Error updating training type with id {}: {}", newTrainingType.getId(), e);
+            throw new ServiceException("Error updating training type with id " + newTrainingType.getId());
         }
     }
 
-    public boolean delete(String username, String password, Long id) {
+    public boolean delete(Long id) {
         try {
-            if (!userDAO.checkUsernameAndPassword(username, password)) {
-                log.error("Invalid credentials for user {}", username);
-                return false;
-            }
-            return trainingTypeDAO.delete(id);
-        } catch (DaoException e) {
+            TrainingType trainingType = trainingTypeDAO.findById(id)
+                    .orElseThrow(() -> new ServiceException("Training Type not found"));
+            return trainingTypeDAO.delete(trainingType);
+        } catch (Exception e) {
             log.error("Error deleting training type with id {}", id, e);
-            return false;
+            throw new ServiceException("Error deleting training type with id " + id);
         }
     }
 
-    public Optional<TrainingType> getTrainingTypeById(String username, String password, Long id) {
+    public Optional<TrainingType> getTrainingTypeById(Long id) {
         try {
-            if (!userDAO.checkUsernameAndPassword(username, password)) {
-                log.error("Invalid credentials for user {}", username);
-                return Optional.empty();
-            }
             return trainingTypeDAO.findById(id);
-        } catch (DaoException e) {
+        } catch (Exception e) {
             log.error("Error fetching training type with id {}", id, e);
-            return Optional.empty();
+            throw new ServiceException("Error fetching training type with id " + id);
         }
     }
 
-    public List<TrainingType> getAllTrainingTypes(String username, String password) {
+    public List<TrainingType> getAllTrainingTypes() {
         try {
-            if (!userDAO.checkUsernameAndPassword(username, password)) {
-                log.error("Invalid credentials for user {}", username);
-                return Collections.emptyList();
-            }
             Optional<List<TrainingType>> trainingTypes = trainingTypeDAO.findAll();
-            if (trainingTypes.isPresent()) {
-                return trainingTypes.get();
-            } else {
+            if (!trainingTypes.isPresent()) {
                 log.warn("No training types found.");
-                return Collections.emptyList();
+                throw new ServiceException("No training types found.");
             }
-        } catch (DaoException e) {
+            return trainingTypes.get();
+        } catch (Exception e) {
             log.error("Error fetching all training types", e);
-            return Collections.emptyList();
+            throw new ServiceException("Error fetching all training types", e);
         }
     }
 
