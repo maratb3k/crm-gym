@@ -3,12 +3,14 @@ package com.example.crm_gym.models;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.hibernate.annotations.Immutable;
 
 @Entity
 @Table(name = "users")
 public class User {
     @Id
     @GeneratedValue(strategy= GenerationType.AUTO)
+    @Column(name = "userid")
     private Long userId;
 
     @Column(name = "first_name", nullable = false)
@@ -22,15 +24,16 @@ public class User {
     private String lastName;
 
     @Column(nullable = false, unique = true)
+    @Immutable
     private String username;
 
     @Column(nullable = false)
     private String password;
 
     @Column(name = "is_active", nullable = false)
-    private boolean isActive;
+    private Boolean isActive;
 
-    @OneToOne(mappedBy = "user")
+    @OneToOne(mappedBy = "user", fetch = FetchType.EAGER)
     private Trainee trainee;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
@@ -38,7 +41,25 @@ public class User {
 
     public User() {}
 
-    public User(String firstName, String lastName, String username, String password, boolean isActive) {
+    public User(String firstName, String lastName) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.isActive = true;
+    }
+    public User(String firstName, String lastName, Boolean isActive) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.isActive = isActive;
+    }
+
+    public User(String username, String firstName, String lastName, Boolean isActive) {
+        this.username = username;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.isActive = isActive;
+    }
+
+    public User(String firstName, String lastName, String username, String password, Boolean isActive) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.username = username;
@@ -66,7 +87,7 @@ public class User {
         return password;
     }
 
-    public boolean isActive() {
+    public Boolean isActive() {
         return isActive;
     }
 
@@ -98,7 +119,7 @@ public class User {
         this.password = password;
     }
 
-    public void setActive(boolean active) {
+    public void setActive(Boolean active) {
         isActive = active;
     }
 

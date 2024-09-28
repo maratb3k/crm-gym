@@ -7,7 +7,6 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -19,66 +18,39 @@ import java.util.Optional;
 public class TrainingTypeDaoImpl implements TrainingTypeDAO {
 
     @PersistenceContext
-    private final EntityManager entityManager;
-
-    @Autowired
-    public TrainingTypeDaoImpl(EntityManager entityManager) {
-        this.entityManager = entityManager;
-    }
+    private EntityManager entityManager;
 
     @Override
-    public boolean save(TrainingType trainingType) {
+    public Optional<TrainingType> save(TrainingType trainingType) {
         try {
             entityManager.persist(trainingType);
-            return true;
+            return Optional.of(trainingType);
         } catch (Exception e) {
             log.error("Error saving training type: {}", trainingType, e);
-            return false;
+            throw new DaoException("Error saving trainee: " + trainingType, e);
         }
     }
 
     @Override
-    public boolean update(Long id, TrainingType updatedTrainingType) {
+    public Optional<TrainingType> update(TrainingType updatedTrainingType) {
         try {
-            TrainingType existingTrainingType = entityManager.find(TrainingType.class, id);
-            if (existingTrainingType != null) {
-                if (updatedTrainingType.getName() != null) {
-                    existingTrainingType.setName(updatedTrainingType.getName());
-                }
-                if (updatedTrainingType.getTrainers() != null && !updatedTrainingType.getTrainers().isEmpty()) {
-                    existingTrainingType.setTrainers(updatedTrainingType.getTrainers());
-                }
-                if (updatedTrainingType.getTrainings() != null && !updatedTrainingType.getTrainings().isEmpty()) {
-                    existingTrainingType.setTrainings(updatedTrainingType.getTrainings());
-                }
-                entityManager.merge(existingTrainingType);
-                entityManager.flush();
-                return true;
-            } else {
-                log.error("Training type with id {} not found.", id);
-                return false;
-            }
+            entityManager.merge(updatedTrainingType);
+            entityManager.flush();
+            return Optional.of(updatedTrainingType);
         } catch (Exception e) {
-            log.error("Error updating training type with id: {}", id, e);
-            throw new DaoException("Error updating training type with id " + id, e);
+            log.error("Error updating training type with id: {}", updatedTrainingType.getId(), e);
+            throw new DaoException("Error updating training type with id " + updatedTrainingType.getId(), e);
         }
     }
 
     @Override
-    public boolean delete(Long id) {
+    public boolean delete(TrainingType trainingType) {
         try {
-            String hql = "DELETE FROM TrainingType t WHERE t.id = :id";
-            int deletedCount = entityManager.createQuery(hql)
-                    .setParameter("id", id)
-                    .executeUpdate();
-            if (deletedCount > 0) {
-                return true;
-            }
+            entityManager.remove(trainingType);
+            return true;
         } catch (Exception e) {
-            throw new DaoException("Error deleting training type with id " + id, e);
+            throw new DaoException("Error deleting training type with id " + trainingType.getId(), e);
         }
-        log.error("Error deleting training type with id: {}", id);
-        return false;
     }
 
     @Override

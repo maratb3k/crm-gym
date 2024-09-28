@@ -7,212 +7,116 @@ import com.example.crm_gym.models.Trainer;
 import com.example.crm_gym.models.Training;
 import com.example.crm_gym.models.User;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Repository;
-import org.springframework.util.StringUtils;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 @Slf4j
+@Transactional
 @Repository
 public class TraineeDaoImpl implements TraineeDAO {
 
     @PersistenceContext
-    private final EntityManager entityManager;
+    private EntityManager entityManager;
     private final UserDaoImpl userDao;
     private final TrainingDaoImpl trainingDao;
     private final TrainerDaoImpl trainerDao;
 
-    public TraineeDaoImpl(EntityManager entityManager, UserDaoImpl userDao, TrainingDaoImpl trainingDao, TrainerDaoImpl trainerDao) {
-        this.entityManager = entityManager;
+    @Autowired
+    @Lazy
+    public TraineeDaoImpl(UserDaoImpl userDao, TrainingDaoImpl trainingDao, TrainerDaoImpl trainerDao) {
         this.userDao = userDao;
         this.trainingDao = trainingDao;
         this.trainerDao = trainerDao;
     }
 
     @Override
-    public boolean save(Trainee trainee) {
+    public Optional<Trainee> save(Trainee trainee) {
         try {
-            System.out.println("rep");
+            Optional<User> existingUser = userDao.findByFirstAndLastName(trainee.getUser().getFirstName(), trainee.getUser().getLastName());
+            if (existingUser.isPresent() && existingUser.get().getTrainer() != null) {
+                throw new DaoException("User already registered as a Trainer. Cannot register as a Trainee.");
+            }
+            boolean isUserSaved = userDao.save(trainee.getUser());
+            if (!isUserSaved) {
+                throw new DaoException("Error saving user: " + trainee.getUser());
+            }
             entityManager.persist(trainee);
-            return true;
+            return Optional.of(trainee);
         }
         catch(Exception e) {
-            System.out.println(e);
             log.error("Error saving trainee: {}", trainee, e);
             throw new DaoException("Error saving trainee: " + trainee, e);
         }
     }
 
     @Override
-    public boolean addTrainer(Long traineeId, Long trainerId) {
+    public boolean addTrainer(Trainee trainee, Trainer trainer) {
         try {
-            Trainee trainee = entityManager.find(Trainee.class, traineeId);
-            if (trainee != null) {
-                Trainer trainer = entityManager.find(Trainer.class, trainerId);
-                if (trainer != null) {
-                    trainee.getTrainers().add(trainer);
-                    entityManager.merge(trainee);
-                    return true;
-                } else {
-                    log.error("Trainer with id {} not found.", trainerId);
-                    return false;
-                }
-            } else {
-                log.error("Trainee with id {} not found.", traineeId);
-                return false;
+            if (trainee.getTrainers().contains(trainer)) {
+                log.warn("Trainer with id {} is already associated with trainee with id {}", trainer.getId(), trainee.getId());
+                throw new DaoException("Trainer with id " + trainer.getId() + " already associated with trainee with id " + trainee.getId());
             }
+            trainee.getTrainers().add(trainer);
+            trainer.getTrainees().add(trainee);
+            entityManager.merge(trainee);
+            return true;
         } catch (Exception e) {
-            log.error("Error adding trainer with id {} to trainee with id: {}", trainerId, traineeId, e);
-            throw new DaoException("Error adding trainer with id " + trainerId + " to trainee with id " + traineeId, e);
+            log.error("Error adding trainer with id {} to trainee with id: {}", trainer.getId(), trainee.getId(), e);
+            throw new DaoException("Error adding trainer with id " + trainer.getId() + " to trainee with id " + trainee.getId(), e);
         }
     }
 
     @Override
-    public boolean addTraining(Long traineeId, Long trainingId) {
+    public boolean addTraining(Trainee trainee, Training training) {
         try {
-            Trainee trainee = entityManager.find(Trainee.class, traineeId);
-            if (trainee != null) {
-                Training training = entityManager.find(Training.class, trainingId);
-                if (training != null) {
-                    training.setTrainee(trainee);
-                    trainee.getTrainings().add(training);
-                    entityManager.merge(trainee);
-                    return true;
-                } else {
-                    log.error("Training with id {} not found.", trainingId);
-                    return false;
-                }
-            } else {
-                log.error("Trainee with id {} not found.", traineeId);
-                return false;
+            if (trainee.getTrainings().contains(training)) {
+                log.warn("Training with id {} is already associated with trainee with id {}", training.getId(), trainee.getId());
+                throw new DaoException("Training with id " + training.getId() + " is already associated with trainee with id " + trainee.getId());
             }
+            training.setTrainee(trainee);
+            trainee.getTrainings().add(training);
+            entityManager.merge(trainee);
+            return true;
         } catch (Exception e) {
-            log.error("Error adding training with id {} to trainee with id: {}", trainingId, traineeId, e);
-            throw new DaoException("Error adding training with id " + trainingId + " to trainee with id " + traineeId, e);
+            log.error("Error adding training with id {} to trainee with id: {}", training.getId(), trainee.getId(), e);
+            throw new DaoException("Error adding training with id " + training.getId() + " to trainee with id " + trainee.getId(), e);
         }
 
     }
 
-    @Override
-    public boolean update(Long id, Trainee updatedTrainee) {
+    public Optional<Trainee> update(Trainee updatedTrainee) {
         try {
-            Trainee existingTrainee = entityManager.find(Trainee.class, id);
-            if(existingTrainee != null) {
-                if(updatedTrainee.getDateOfBirth() != null) {
-                    existingTrainee.setDateOfBirth(updatedTrainee.getDateOfBirth());
-                } else if(StringUtils.hasText(updatedTrainee.getAddress())) {
-                    existingTrainee.setAddress(updatedTrainee.getAddress());
-                } else if(updatedTrainee.getUser() != null) {
-                    existingTrainee.setUser(updatedTrainee.getUser());
-                } else if(updatedTrainee.getTrainers() != null && !updatedTrainee.getTrainers().isEmpty()) {
-                    existingTrainee.setTrainers(updatedTrainee.getTrainers());
-                } else if(updatedTrainee.getTrainings() != null && !updatedTrainee.getTrainings().isEmpty()) {
-                    existingTrainee.setTrainings(updatedTrainee.getTrainings());
-                }
-                entityManager.merge(existingTrainee);
-                entityManager.flush();
-                return true;
-            } else {
-                log.error("Trainee with id {} not found.", id);
-                return false;
-            }
+            entityManager.merge(updatedTrainee);
+            entityManager.flush();
+            return Optional.of(updatedTrainee);
+        } catch (ConstraintViolationException e) {
+            log.error("Validation failed: {}", e.getMessage());
+            throw new IllegalArgumentException("User data is invalid: " + e.getConstraintViolations());
         } catch (Exception e) {
-            log.error("Error updating trainee with id: {}", id, e);
-            throw new DaoException("Error updating trainee with id " + id, e);
+            log.error("Error updating trainee with id: {}", updatedTrainee.getId(), e);
+            throw new DaoException("Error updating trainee with id " + updatedTrainee.getId(), e);
         }
     }
 
     @Override
-    public boolean updatePassword(Long id, String newPassword) {
+    public boolean delete(Trainee trainee) {
         try {
-            Trainee trainee = entityManager.find(Trainee.class, id);
-            if (trainee != null) {
-                User user = trainee.getUser();
-                if (user != null) {
-                    userDao.updatePassword(user.getUserId(), newPassword);
-                    return true;
-                } else {
-                    log.error("No associated user found for trainee with id {}", id);
-                    return false;
-                }
-            } else {
-                log.error("Trainee with id {} not found.", id);
-                return false;
-            }
-        } catch (DaoException e) {
-            log.error("Error updating user password for trainee with id: {}", id, e);
-            throw e;
+            entityManager.remove(trainee);
+            return true;
         } catch (Exception e) {
-            log.error("Unexpected error occurred while updating password for trainee with id: {}", id, e);
-            throw new DaoException("Unexpected error updating user password for trainee with id " + id, e);
+            log.error("Error deleting trainee with id: {}", trainee.getId(), e);
+            throw new DaoException("Error deleting trainee with id " + trainee.getId(), e);
         }
-    }
-
-    @Override
-    public boolean updateTrainersList(Long id, Set<Trainer> trainers) {
-        try {
-            Trainee trainee = entityManager.find(Trainee.class, id);
-            if (trainee != null) {
-                trainee.setTrainers(trainers);
-                entityManager.merge(trainee);
-                return true;
-            } else {
-                log.error("Error updating trainer list. Trainee with id: {} not found.", id);
-                return false;
-            }
-        } catch (Exception e) {
-            log.error("Error updating trainer list. Trainee with id: {} not found.", id);
-            throw new DaoException("Error updating trainer list. Trainee with id " + id + " not found.", e);
-        }
-    }
-
-    @Override
-    public boolean updateTraineeUser(Long traineeId, Long userId) {
-        try {
-            Trainee trainee = entityManager.find(Trainee.class, traineeId);
-
-            if (trainee != null) {
-                Optional<User> existingUserOptional = userDao.findById(userId);
-                if (existingUserOptional.isPresent()) {
-                    trainee.setUser(existingUserOptional.get());
-                } else {
-                    log.error("Trainee with id {} not found.", traineeId);
-                    throw new DaoException("Error adding or updating user for trainee with id " + traineeId + ". User with id " + userId + " not found.");
-                }
-                entityManager.merge(trainee);
-                entityManager.flush();
-                return true;
-            } else {
-                log.error("Trainee with id {} not found.", traineeId);
-                throw new DaoException("Error adding or updating user for trainee with id " + traineeId + " not found.");
-            }
-        } catch (Exception e) {
-            log.error("Error adding or updating user for trainee with id: {}", traineeId, e);
-            throw new DaoException("Error adding or updating user for trainee with id " + traineeId, e);
-        }
-    }
-
-    @Override
-    public boolean delete(Long id) {
-        try {
-            String hql = "DELETE FROM Trainee t WHERE t.id = :id";
-            int deletedCount = entityManager.createQuery(hql)
-                    .setParameter("id", id)
-                    .executeUpdate();
-            if (deletedCount > 0) {
-                return true;
-            }
-        } catch (Exception e) {
-            log.error("Error deleting trainee with id: {}", id, e);
-            throw new DaoException("Error deleting trainee with id " + id, e);
-        }
-        log.error("Error deleting trainee with id: {}", id);
-        return false;
     }
 
     @Override
@@ -229,12 +133,15 @@ public class TraineeDaoImpl implements TraineeDAO {
                     return true;
                 } else {
                     log.error("Trainee associated with user {} not found", username);
-                    return false;
+                    throw new DaoException("Trainee associated with user " + username + " not found");
                 }
             } else {
                 log.error("User with username {} not found", username);
-                return false;
+                throw new DaoException("User with username " + username + " not found");
             }
+        } catch (NoResultException e) {
+            log.warn("userId not found for trainee with username: {}", username, e);
+            throw new DaoException("userId not found for trainee with username: " + username, e);
         } catch (DaoException e) {
             log.error("Error deleting trainee by username: {}", username, e);
             throw e;
@@ -245,79 +152,35 @@ public class TraineeDaoImpl implements TraineeDAO {
     }
 
     @Override
-    public boolean deleteTraineeUser(Long traineeId) {
+    public boolean deleteTrainerFromList(Trainee trainee, Trainer trainer) {
         try {
-            Trainee trainee = entityManager.find(Trainee.class, traineeId);
-
-            if (trainee != null) {
-                trainee.setUser(null);
-                entityManager.merge(trainee);
-                entityManager.flush();
-                return true;
-            } else {
-                log.error("Trainee with id {} not found.", traineeId);
-                throw new DaoException("Error deleting user for trainee with id " + traineeId + " not found.");
+            if (!trainee.getTrainers().contains(trainer)) {
+                log.warn("Training with id {} is not associated with trainee with id {}", trainer.getId(), trainee.getId());
+                throw new DaoException("Training with id " + trainee.getId() + " is not associated with trainee with id " + trainer.getId());
             }
+            trainee.getTrainers().remove(trainer);
+            entityManager.merge(trainee);
+            return true;
         } catch (Exception e) {
-            log.error("Error deleting user for trainee with id: {}", traineeId, e);
-            throw new DaoException("Error deleting user for trainee with id " + traineeId, e);
+            log.error("Error removing trainer with id {} from trainee with id: {}", trainee.getId(), trainer.getId(), e);
+            throw new DaoException("Error removing trainer with id " + trainer.getId() + " from trainee with id " + trainee.getId(), e);
         }
     }
 
     @Override
-    public boolean deleteTrainerFromList(Long traineeId, Long trainerId) {
+    public boolean deleteTrainingFromList(Trainee trainee, Training training) {
         try {
-            Trainee trainee = entityManager.find(Trainee.class, traineeId);
-            if (trainee != null) {
-                Trainer trainer = entityManager.find(Trainer.class, trainerId);
-                if (trainer != null) {
-                    if (trainee.getTrainers().remove(trainer)) {
-                        entityManager.merge(trainee);
-                        return true;
-                    } else {
-                        log.error("Trainer with id {} is not associated with trainee with id {}.", trainerId, traineeId);
-                        return false;
-                    }
-                } else {
-                    log.error("Trainer with id {} not found.", trainerId);
-                    return false;
-                }
-            } else {
-                log.error("Trainee with id {} not found.", traineeId);
-                return false;
+            if (!trainee.getTrainings().contains(training)) {
+                log.warn("Training with id {} is not associated with trainee with id {}", training.getId(), trainee.getId());
+                throw new DaoException("Training with id " + trainee.getId() + " is not associated with trainee with id " + training.getId());
             }
+            trainee.getTrainings().remove(training);
+            training.setTrainee(null);
+            entityManager.merge(trainee);
+            return true;
         } catch (Exception e) {
-            log.error("Error removing trainer with id {} from trainee with id: {}", trainerId, traineeId, e);
-            throw new DaoException("Error removing trainer with id " + trainerId + " from trainee with id " + traineeId, e);
-        }
-    }
-
-    @Override
-    public boolean deleteTrainingFromList(Long traineeId, Long trainingId) {
-        try {
-            Trainee trainee = entityManager.find(Trainee.class, traineeId);
-            if (trainee != null) {
-                Training training = entityManager.find(Training.class, trainingId);
-                if (training != null) {
-                    if (trainee.getTrainings().remove(training)) {
-                        training.setTrainee(null);
-                        entityManager.merge(trainee);
-                        return true;
-                    } else {
-                        log.error("Training with id {} is not associated with trainee with id {}.", trainingId, traineeId);
-                        return false;
-                    }
-                } else {
-                    log.error("Training with id {} not found.", trainingId);
-                    return false;
-                }
-            } else {
-                log.error("Trainee with id {} not found.", traineeId);
-                return false;
-            }
-        } catch (Exception e) {
-            log.error("Error removing training with id {} from trainee with id: {}", trainingId, traineeId, e);
-            throw new DaoException("Error removing training with id " + trainingId + " from trainee with id " + traineeId, e);
+            log.error("Error removing training with id {} from trainee with id: {}", training.getId(), trainee.getId(), e);
+            throw new DaoException("Error removing training with id " + training.getId() + " from trainee with id " + trainee.getId(), e);
         }
     }
 
@@ -347,6 +210,9 @@ public class TraineeDaoImpl implements TraineeDAO {
                 log.error("User with username " + username + " not found");
                 throw new DaoException("Error finding trainee by username " + username);
             }
+        } catch (NoResultException e) {
+            log.warn("User with username {} not found", username, e);
+            throw new DaoException("User with username " + username + " not found", e);
         } catch (Exception e) {
             log.error("Error finding trainee by username: {}", username, e);
             throw new DaoException("Error finding trainee by username " + username, e);

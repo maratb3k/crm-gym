@@ -5,10 +5,10 @@ import com.example.crm_gym.models.TrainingType;
 import java.util.List;
 import java.util.Optional;
 
-public interface TrainingTypeDAO {
-    boolean save(TrainingType trainingType);
-    boolean update(Long id, TrainingType trainingType);
-    boolean delete(Long id);
+public interface TrainingTypeDAO extends BaseDAO<TrainingType> {
+    Optional<TrainingType> save(TrainingType trainingType);
+    Optional<TrainingType> update(TrainingType trainingType);
+    boolean delete(TrainingType trainingType);
     Optional<TrainingType> findById(Long id);
     Optional<List<TrainingType>> findAll();
 }

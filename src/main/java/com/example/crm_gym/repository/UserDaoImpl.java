@@ -3,31 +3,42 @@ package com.example.crm_gym.repository;
 import com.example.crm_gym.dao.UserDAO;
 import com.example.crm_gym.exception.DaoException;
 import com.example.crm_gym.models.User;
+import com.example.crm_gym.utils.UserProfileUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 @Slf4j
+@Transactional
 @Repository
 public class UserDaoImpl implements UserDAO {
 
     @PersistenceContext
-    private final EntityManager entityManager;
-
-    @Autowired
-    public UserDaoImpl(EntityManager entityManager) {
-        this.entityManager = entityManager;
-    }
+    private EntityManager entityManager;
 
     @Override
     public boolean save(User user) {
         try {
+            Optional<User> optUser = findByFirstAndLastName(user.getFirstName(), user.getLastName());
+            if (optUser.isPresent()) {
+                User existingUser = optUser.get();
+                if (existingUser.getTrainer() != null) {
+                    throw new DaoException("User already registered as a Trainer. Cannot register as a Trainee.");
+                } else if (existingUser.getTrainee() != null) {
+                    throw new DaoException("User already registered as a Trainee. Cannot register as a Trainer.");
+                }
+            }
+            String username = generateUniqueUsername(user.getFirstName(), user.getLastName());
+            String password = UserProfileUtil.generatePassword();
+            user.setUsername(username);
+            user.setPassword(password);
             entityManager.persist(user);
             return true;
         } catch (Exception e) {
@@ -36,80 +47,40 @@ public class UserDaoImpl implements UserDAO {
         }
     }
 
-    @Override
-    public boolean update(Long id, User updatedUser) {
-        try {
-            User existingUser = entityManager.find(User.class, id);
-            if (existingUser != null) {
-                existingUser.setFirstName(updatedUser.getFirstName());
-                existingUser.setLastName(updatedUser.getLastName());
-                existingUser.setUsername(updatedUser.getUsername());
-                existingUser.setPassword(updatedUser.getPassword());
-                existingUser.setActive(updatedUser.isActive());
-                entityManager.merge(existingUser);
-                entityManager.flush();
-                return true;
-            } else {
-                log.error("User with id {} not found.", id);
-                return false;
+    private String generateUniqueUsername(String firstName, String lastName) {
+        Optional<List<User>> optionalUsers = findAll();
+        List<User> existingUsers = optionalUsers.orElse(Collections.emptyList());
+        int suffix = 0;
+        while (true) {
+            String username = UserProfileUtil.generateUsername(firstName, lastName, suffix);
+            if (existingUsers.stream().noneMatch(t -> t.getUsername().equals(username))) {
+                return username;
             }
-        } catch (Exception e) {
-            log.error("Error updating user with id: {}", id, e);
-            throw new DaoException("Error updating user with id " + id, e);
+            suffix++;
         }
     }
 
     @Override
-    public boolean updatePassword(Long id, String newPassword) {
+    public Optional<User> update(User updatedUser) {
         try {
-            User user = entityManager.find(User.class, id);
-            if (user != null) {
-                user.setPassword(newPassword);
-                entityManager.merge(user);
-                return true;
-            } else {
-                log.error("Error updating user password. User with id: {} not found.", id);
-                return false;
-            }
+            entityManager.merge(updatedUser);
+            entityManager.flush();
+            return Optional.of(updatedUser);
         } catch (Exception e) {
-            log.error("Error updating user password. User with id: {} not found.", id);
-            throw new DaoException("Error updating user password with id " + id, e);
+            log.error("Error updating user with id: {}", updatedUser.getUserId(), e);
+            throw new DaoException("Error updating user with id " + updatedUser.getUserId(), e);
         }
     }
 
     @Override
-    public boolean updateUserIsActive(Long id, boolean isActive) {
+    public boolean delete(User user) {
         try {
-            User user = entityManager.find(User.class, id);
-            if (user != null) {
-                user.setActive(isActive);
-                entityManager.merge(user);
-                return true;
-            } else {
-                log.error("Error updating user 'isActive' field. User with id: {} not found.", id);
-                return false;
-            }
+            entityManager.remove(user);
+            return true;
         } catch (Exception e) {
-            log.error("Error updating user 'isActive' field. User with id: {} not found.", id);
-            throw new DaoException("Error updating user 'isActive' field with id " + id, e);
+            log.error("Error deleting user with id: {}", user.getUserId(), e);
+            throw new DaoException("Error deleting user with id " + user.getUserId(), e);
         }
-    }
-
-    @Override
-    public boolean delete(Long id) {
-        try {
-            String hql = "DELETE FROM User u WHERE u.userId = :id";
-            int deletedCount = entityManager.createQuery(hql)
-                    .setParameter("id", id)
-                    .executeUpdate();
-            if (deletedCount > 0) {
-                return true;
-            }
-        } catch (Exception e) {
-            log.error("Error deleting user with id: {}", id);
-            throw new DaoException("Error deleting user with id " + id, e);
-        }
-        return false;
     }
 
     @Override
@@ -162,6 +133,24 @@ public class UserDaoImpl implements UserDAO {
     }
 
     @Override
+    public Optional<User> findByFirstAndLastName(String firstName, String lastName) {
+        try {
+            String hql = "FROM User u WHERE u.firstName = :firstName AND u.lastName = :lastName";
+            User user = entityManager.createQuery(hql, User.class)
+                    .setParameter("firstName", firstName)
+                    .setParameter("lastName", lastName)
+                    .getSingleResult();
+            return Optional.ofNullable(user);
+        } catch (NoResultException e) {
+            log.warn("No user found with firstname {} and lastname {}", firstName, lastName);
+            return Optional.empty();
+        } catch (Exception e) {
+            log.error("Error finding user with firstname " + firstName + " and lastname " + lastName, e);
+            throw new DaoException("Error finding user with firstname " + firstName + " and lastname " + lastName, e);
+        }
+    }
+
+    @Override
     public Optional<List<User>> findAll() {
         try {
             String hql = "FROM User";
@@ -170,25 +159,6 @@ public class UserDaoImpl implements UserDAO {
         } catch (Exception e) {
             log.error("Error finding all users", e);
             throw new DaoException("Error finding users", e);
-        }
-    }
-
-    @Override
-    public boolean checkUsernameAndPassword(String username, String password) {
-        try {
-            String jpql = "SELECT u FROM User u WHERE u.username = :username AND u.password = :password";
-            User user = entityManager.createQuery(jpql, User.class)
-                    .setParameter("username", username)
-                    .setParameter("password", password)
-                    .getSingleResult();
-            if (user == null) {
-                log.error("User with username {} not found or wrong password.", username);
-                return false;
-            }
-            return true;
-        } catch (Exception e) {
-            log.error("Error checking username and password", e);
-            throw new DaoException("Error checking username and password. Username: " + username, e);
         }
     }
 }
