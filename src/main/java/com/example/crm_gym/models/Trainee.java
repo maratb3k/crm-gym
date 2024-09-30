@@ -3,9 +3,7 @@ package com.example.crm_gym.models;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 @Entity
 @Table(name = "trainees")
@@ -22,31 +20,33 @@ public class Trainee {
     @Size(min = 10, max = 255, message = "Address name must be between 10 and 255 characters")
     private String address;
 
-    @OneToOne
+    @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id")
     private User user;
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "trainee_trainer",
             joinColumns = @JoinColumn(name = "trainee_id"),
             inverseJoinColumns = @JoinColumn(name = "trainer_id")
     )
-    private Set<Trainer> trainers = new HashSet<>();
+    private List<Trainer> trainers = new ArrayList<>();
 
-    @OneToMany(mappedBy = "trainee", cascade = CascadeType.REMOVE, orphanRemoval = true)
-    private Set<Training> trainings = new HashSet<>();
+    @OneToMany(mappedBy = "trainee", cascade = CascadeType.REMOVE, orphanRemoval = true, fetch = FetchType.EAGER)
+    private List<Training> trainings = new ArrayList<>();
 
     public Trainee(){
-    }
-
-    public Trainee(User user) {
-        this.user = user;
     }
 
     public Trainee(Date dateOfBirth, String address) {
         this.dateOfBirth = dateOfBirth;
         this.address = address;
+    }
+
+    public Trainee(Date dateOfBirth, String address, User user) {
+        this.dateOfBirth = dateOfBirth;
+        this.address = address;
+        this.user = user;
     }
 
     public Long getId() {
@@ -65,8 +65,12 @@ public class Trainee {
         return user;
     }
 
-    public Set<Trainer> getTrainers() {
+    public List<Trainer> getTrainers() {
         return trainers;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public void setDateOfBirth(Date dateOfBirth) {
@@ -81,15 +85,15 @@ public class Trainee {
         this.user = user;
     }
 
-    public void setTrainers(Set<Trainer> trainers) {
+    public void setTrainers(List<Trainer> trainers) {
         this.trainers = trainers;
     }
 
-    public Set<Training> getTrainings() {
+    public List<Training> getTrainings() {
         return trainings;
     }
 
-    public void setTrainings(Set<Training> trainings) {
+    public void setTrainings(List<Training> trainings) {
         this.trainings = trainings;
     }
 

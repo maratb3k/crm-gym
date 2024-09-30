@@ -11,7 +11,7 @@ public class TrainingType {
     @GeneratedValue(strategy= GenerationType.AUTO)
     private Long id;
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "name", nullable = false, unique = true)
     @Enumerated(EnumType.STRING)
     private TrainingTypeName name;
 

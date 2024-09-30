@@ -2,7 +2,8 @@ package com.example.crm_gym.services;
 
 import com.example.crm_gym.dao.TrainingDAO;
 import com.example.crm_gym.dao.UserDAO;
-import com.example.crm_gym.exception.DaoException;
+import com.example.crm_gym.exception.ServiceException;
+import com.example.crm_gym.logger.TransactionLogger;
 import com.example.crm_gym.models.*;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -14,110 +15,95 @@ import java.util.*;
 @Slf4j
 @Transactional
 @Service
-public class TrainingService {
+public class TrainingService extends BaseService<Training> {
 
     private TrainingDAO trainingDAO;
     private UserDAO userDAO;
 
     @Autowired
     public TrainingService(TrainingDAO trainingDAO, UserDAO userDAO) {
+        super(trainingDAO);
         this.trainingDAO = trainingDAO;
         this.userDAO = userDAO;
     }
 
-    public boolean create(String trainingName, TrainingType trainingType, Date trainingDate, int trainingDuration) {
+    public Optional<Training> create(Training training) {
+        String transactionId = TransactionLogger.generateTransactionId();
         try {
-            Training training = new Training(trainingName, trainingType, trainingDate, trainingDuration);
             return trainingDAO.save(training);
-        } catch (DaoException e) {
-            log.error("Error creating training", e);
-            return false;
+        } catch (Exception e) {
+            log.error("[Transaction ID: {}] - Error creating training", transactionId, e);
+            throw new ServiceException("Error creating training", e);
         }
     }
 
-    public boolean update(String username, String password, Long id, Training training) {
+    public Training update(Training updatedTraining) {
+        String transactionId = TransactionLogger.generateTransactionId();
         try {
-            if (!userDAO.checkUsernameAndPassword(username, password)) {
-                log.error("Invalid credentials for user {}", username);
-                return false;
-            }
-            return trainingDAO.update(id, training);
-        } catch (DaoException e) {
-            log.error("Error updating training with id {}: {}", id, e);
-            return false;
+            findEntityById(updatedTraining.getId())
+                    .orElseThrow(() -> new ServiceException("Training not found"));
+            return trainingDAO.update(updatedTraining);
+        } catch (Exception e) {
+            log.error("[Transaction ID: {}] - Error updating training with id {}: {}", transactionId, updatedTraining.getId(), e);
+            throw new ServiceException("Error updating training with id " + updatedTraining.getId(), e);
         }
     }
 
-    public boolean delete(String username, String password, Long id) {
+    public boolean delete(Long id) {
+        String transactionId = TransactionLogger.generateTransactionId();
         try {
-            if (!userDAO.checkUsernameAndPassword(username, password)) {
-                log.error("Invalid credentials for user {}", username);
-                return false;
-            }
-            return trainingDAO.delete(id);
-        } catch (DaoException e) {
-            log.error("Error deleting training with id {}", id, e);
-            return false;
+            Training training = findEntityById(id)
+                    .orElseThrow(() -> new ServiceException("Training not found"));
+            return trainingDAO.delete(training);
+        } catch (Exception e) {
+            log.error("[Transaction ID: {}] - Error deleting training with id {}", transactionId, id, e);
+            throw new ServiceException("Error deleting training with id " + id, e);
         }
     }
 
-    public Optional<Training> getTrainingById(String username, String password, Long id) {
+    public Optional<Training> getTrainingById(Long id) {
+        String transactionId = TransactionLogger.generateTransactionId();
         try {
-            if (!userDAO.checkUsernameAndPassword(username, password)) {
-                log.error("Invalid credentials for user {}", username);
-                return Optional.empty();
-            }
             return trainingDAO.findById(id);
-        } catch (DaoException e) {
-            log.error("Error fetching training with id {}", id, e);
-            return Optional.empty();
+        } catch (Exception e) {
+            log.error("[Transaction ID: {}] - Error fetching training with id {}", transactionId, id, e);
+            throw new ServiceException("Error fetching training with id " + id, e);
         }
     }
 
-    public List<Training> getAllTrainings(String username, String password) {
+    public List<Training> getAllTrainings() {
+        String transactionId = TransactionLogger.generateTransactionId();
         try {
-            if (!userDAO.checkUsernameAndPassword(username, password)) {
-                log.error("Invalid credentials for user {}", username);
-                return Collections.emptyList();
-            }
             Optional<List<Training>> trainings = trainingDAO.findAll();
             if (trainings.isPresent()) {
                 return trainings.get();
             } else {
-                log.warn("No trainings found.");
-                return Collections.emptyList();
+                log.warn("[Transaction ID: {}] - No trainings found.", transactionId);
+                throw new ServiceException("No trainings found");
             }
-        } catch (DaoException e) {
-            log.error("Error fetching all trainings", e);
-            return Collections.emptyList();
+        } catch (Exception e) {
+            log.error("[Transaction ID: {}] - Error fetching all trainings", transactionId, e);
+            throw new ServiceException("Error fetching all trainings", e);
         }
     }
 
-    public List<Training> getTrainingsByTraineeUsernameAndCriteria(String username, String password,Date fromDate, Date toDate, String trainerName, String trainingTypeName) {
+    public Optional<List<Training>> getTrainingsByTraineeUsernameAndCriteria(String username, Date fromDate, Date toDate, String trainerName, String trainingTypeName) {
+        String transactionId = TransactionLogger.generateTransactionId();
         try {
-            if (!userDAO.checkUsernameAndPassword(username, password)) {
-                log.error("Invalid credentials for user {}", username);
-                return Collections.emptyList();
-            }
-            Optional<List<Training>> trainings = trainingDAO.findTrainingsByTraineeUsernameAndCriteria(username, fromDate, toDate, trainerName, trainingTypeName);
-            if (trainings.isPresent()) {
-                return trainings.get();
-            } else {
-                log.warn("No trainings found for trainee username: {}", username);
-                return Collections.emptyList();
-            }
-        } catch (DaoException e) {
-            log.error("Error retrieving trainings for trainee username: {}", username, e);
-            return Collections.emptyList();
+            return trainingDAO.findTrainingsByTraineeUsernameAndCriteria(username, fromDate, toDate, trainerName, trainingTypeName);
+        } catch (Exception e) {
+            log.error("[Transaction ID: {}] - Error retrieving trainings for trainee username: {}", transactionId, username, e);
+            throw new ServiceException("Error retrieving trainings for trainee username: " + username, e);
         }
     }
 
     public Optional<List<Training>> getTrainingsByTrainerUsernameAndCriteria(String username, Date fromDate, Date toDate, String traineeName) {
+        String transactionId = TransactionLogger.generateTransactionId();
         try {
             return trainingDAO.findTrainingsByTrainerUsernameAndCriteria(username, fromDate, toDate, traineeName);
-        } catch (DaoException e) {
-            log.error("Error retrieving trainings for trainer username: {}", username, e);
-            return Optional.empty();
+        } catch (Exception e) {
+            log.error("[Transaction ID: {}] - Error retrieving trainings for trainer username: {}", transactionId, username, e);
+            throw new ServiceException("Error retrieving trainings for trainer username: " + username, e);
         }
     }
 

@@ -5,6 +5,8 @@ import com.example.crm_gym.models.*;
 import com.example.crm_gym.services.*;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
+import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
+
 import java.util.Date;
 import java.util.Optional;
 
@@ -24,10 +26,10 @@ public class CrmGymApplication {
 		//Trainer trainer = new Trainer(Training);
 		//TrainingType trainingType = new TrainingType(TrainingTypeName.CARDIO);
 		//System.out.println(traineeService.updateTraineeUser("Kate.Middleton", "VYM96r4Vqe", 1L, 1L));
-		Optional<User> optUser = userService.getUserById("Sarah.Lee", "lKrgfODBrB", 2L);
-		Optional<Trainer> optionalTrainer = trainerService.getTrainerById("Sarah.Lee", "lKrgfODBrB", 1L);
-		Optional<Trainee> optionalTrainee = traineeService.getTraineeById("James.Brown", "VoQyDuaoXn", 2L);
-		Optional<TrainingType> trainingType = trainingTypeService.getTrainingTypeById("James.Brown", "VoQyDuaoXn",1L);
+		//Optional<User> optUser = userService.getUserById("Sarah.Lee", "lKrgfODBrB", 2L);
+		//Optional<Trainer> optionalTrainer = trainerService.getTrainerById("Sarah.Lee", "lKrgfODBrB", 1L);
+		//Optional<Trainee> optionalTrainee = traineeService.getTraineeById("James.Brown", "VoQyDuaoXn", 2L);
+		//Optional<TrainingType> trainingType = trainingTypeService.getTrainingTypeById("James.Brown", "VoQyDuaoXn",1L);
 		//System.out.println(trainerService.create(opt.get()));
 		//System.out.println(opt.get());
 
@@ -39,7 +41,8 @@ public class CrmGymApplication {
 		//System.out.println(traineeService.updateTraineeUser("Sarah.Lee", "lKrgfODBrB", optionalTrainer.get().getId(), optUser.get().getUserId()));
  		//System.out.println(trainerService.getTrainingsByTrainerUsernameAndCriteria("Sarah.Lee", "lKrgfODBrB", new Date(2024, 9, 10), new Date(2024, 9, 15), optionalTrainee.get().getUser().getUsername()));
 
-		System.out.println(trainingService.create("cardio group 1", trainingType.get(), new Date(2024, 9, 25), 60));
+        //Optional<Trainee> optionalTrainee = traineeService.getTraineeByUsername("James.Brown");
+		System.out.println("hello");
 
 		context.close();
 	}

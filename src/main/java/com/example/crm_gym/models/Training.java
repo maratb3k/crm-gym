@@ -4,8 +4,6 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 
 import java.util.Date;
-import java.util.Set;
-import java.util.HashSet;
 
 @Entity
 @Table(name = "trainings")
@@ -27,7 +25,7 @@ public class Training {
     private String trainingName;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "training_type_id", nullable = false)
+    @JoinColumn(name = "training_type_id")
     private TrainingType trainingType;
 
     @Temporal(TemporalType.DATE)
@@ -42,6 +40,14 @@ public class Training {
     public Training(String trainingName, TrainingType trainingType, Date trainingDate, int trainingDuration) {
         this.trainingName = trainingName;
         this.trainingType = trainingType;
+        this.trainingDate = trainingDate;
+        this.trainingDuration = trainingDuration;
+    }
+
+    public Training(Trainee trainee, Trainer trainer, String trainingName, Date trainingDate, int trainingDuration) {
+        this.trainee = trainee;
+        this.trainer = trainer;
+        this.trainingName = trainingName;
         this.trainingDate = trainingDate;
         this.trainingDuration = trainingDuration;
     }

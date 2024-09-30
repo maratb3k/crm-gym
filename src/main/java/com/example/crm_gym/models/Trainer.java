@@ -2,8 +2,8 @@ package com.example.crm_gym.models;
 
 import jakarta.persistence.*;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "trainers")
@@ -12,7 +12,7 @@ public class Trainer {
     @GeneratedValue(strategy= GenerationType.AUTO)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "specialization_id", nullable = false)
     private TrainingType specialization;
 
@@ -20,19 +20,24 @@ public class Trainer {
     @JoinColumn(name = "user_id", referencedColumnName = "userId")
     private User user;
 
-    @ManyToMany(mappedBy = "trainers")
-    private Set<Trainee> trainees = new HashSet<>();
+    @ManyToMany(mappedBy = "trainers", fetch = FetchType.EAGER)
+    private List<Trainee> trainees = new ArrayList<>();
 
     @OneToMany(mappedBy = "trainer", cascade = CascadeType.REMOVE, orphanRemoval = true)
-    private Set<Training> trainings = new HashSet<>();
+    private List<Training> trainings = new ArrayList<>();
 
     public Trainer() {}
 
-    public Trainer(TrainingType specialization) {
-        this.specialization = specialization;
+    public Trainer(User user) {
+        this.user = user;
     }
 
-    public Trainer(TrainingType specialization, User user, Set<Trainee> trainees, Set<Training> trainings) {
+    public Trainer(TrainingType specialization, User user) {
+        this.specialization = specialization;
+        this.user = user;
+    }
+
+    public Trainer(TrainingType specialization, User user, List<Trainee> trainees, List<Training> trainings) {
         this.specialization = specialization;
         this.user = user;
         this.trainees = trainees;
@@ -50,11 +55,11 @@ public class Trainer {
         return user;
     }
 
-    public Set<Training> getTrainings() {
+    public List<Training> getTrainings() {
         return trainings;
     }
 
-    public Set<Trainee> getTrainees() {
+    public List<Trainee> getTrainees() {
         return trainees;
     }
 
@@ -66,11 +71,11 @@ public class Trainer {
         this.user = user;
     }
 
-    public void setTrainees(Set<Trainee> trainees) {
+    public void setTrainees(List<Trainee> trainees) {
         this.trainees = trainees;
     }
 
-    public void setTrainings(Set<Training> trainings) {
+    public void setTrainings(List<Training> trainings) {
         this.trainings = trainings;
     }
 

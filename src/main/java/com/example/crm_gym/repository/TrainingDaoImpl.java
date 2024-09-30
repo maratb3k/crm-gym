@@ -1,7 +1,5 @@
 package com.example.crm_gym.repository;
 
-import com.example.crm_gym.dao.TraineeDAO;
-import com.example.crm_gym.dao.TrainerDAO;
 import com.example.crm_gym.dao.TrainingDAO;
 import com.example.crm_gym.exception.DaoException;
 import com.example.crm_gym.models.*;
@@ -23,21 +21,14 @@ import java.util.Optional;
 public class TrainingDaoImpl implements TrainingDAO {
 
     @PersistenceContext
-    private final EntityManager entityManager;
-    private final TraineeDAO traineeDAO;
-    private final TrainerDAO trainerDAO;
-
-    public TrainingDaoImpl(EntityManager entityManager, TraineeDAO traineeDAO, TrainerDAO trainerDAO) {
-        this.entityManager = entityManager;
-        this.traineeDAO = traineeDAO;
-        this.trainerDAO = trainerDAO;
-    }
+    private EntityManager entityManager;
 
     @Override
-    public boolean save(Training training) {
+    public Optional<Training> save(Training training) {
         try {
             entityManager.persist(training);
-            return true;
+            entityManager.flush();
+            return Optional.of(training);
         } catch (Exception e) {
             log.error("Error saving training: {}", training, e);
             throw new DaoException("Error saving training " + training, e);
@@ -45,57 +36,26 @@ public class TrainingDaoImpl implements TrainingDAO {
     }
 
     @Override
-    public boolean update(Long id, Training updatedTraining) {
+    public Training update(Training updatedTraining) {
         try {
-            Training existingTraining = entityManager.find(Training.class, id);
-            if (existingTraining != null) {
-                if (updatedTraining.getTrainingName() != null) {
-                    existingTraining.setTrainingName(updatedTraining.getTrainingName());
-                }
-                if (updatedTraining.getTrainee() != null) {
-                    existingTraining.setTrainee(updatedTraining.getTrainee());
-                }
-                if (updatedTraining.getTrainer() != null) {
-                    existingTraining.setTrainer(updatedTraining.getTrainer());
-                }
-                if (updatedTraining.getTrainingType() != null) {
-                    existingTraining.setTrainingType(updatedTraining.getTrainingType());
-                }
-                if (updatedTraining.getTrainingDate() != null) {
-                    existingTraining.setTrainingDate(updatedTraining.getTrainingDate());
-                }
-                if (updatedTraining.getTrainingDuration() > 0) {
-                    existingTraining.setTrainingDuration(updatedTraining.getTrainingDuration());
-                }
-                entityManager.merge(existingTraining);
-                entityManager.flush();
-                return true;
-            } else {
-                log.error("Training with id {} not found.", id);
-                throw new DaoException("Error updating training with id " + id);
-            }
+            entityManager.merge(updatedTraining);
+            entityManager.flush();
+            return updatedTraining;
         } catch (Exception e) {
-            log.error("Error updating training with id: {}", id, e);
-            throw new DaoException("Error updating training with id " + id, e);
+            log.error("Error updating training with id: {}", updatedTraining.getId(), e);
+            throw new DaoException("Error updating training with id " + updatedTraining.getId(), e);
         }
     }
 
     @Override
-    public boolean delete(Long id) {
+    public boolean delete(Training training) {
         try {
-            String hql = "DELETE FROM Training t WHERE t.id = :id";
-            int deletedCount = entityManager.createQuery(hql)
-                    .setParameter("id", id)
-                    .executeUpdate();
-            if (deletedCount > 0) {
-                return true;
-            }
+            entityManager.remove(training);
+            return true;
         } catch (Exception e) {
-            log.error("Error deleting training with id: {}", id);
-            throw new DaoException("Error deleting training with id " + id, e);
+            log.error("Error deleting training with id: {}", training.getId());
+            throw new DaoException("Error deleting training with id " + training.getId(), e);
         }
-        log.error("Error deleting training with id: {}", id);
-        return false;
     }
 
     @Override
@@ -162,7 +122,6 @@ public class TrainingDaoImpl implements TrainingDAO {
                 log.info("No trainings found matching the criteria.");
                 return Optional.empty();
             } else {
-                log.info("Found {} trainings matching the criteria.", results.size());
                 return Optional.of(results);
             }
 
@@ -204,11 +163,8 @@ public class TrainingDaoImpl implements TrainingDAO {
             if (results.isEmpty()) {
                 log.info("No trainings found for trainer username: {} with the specified criteria.", username);
                 return Optional.empty();
-            } else {
-                log.info("Found {} trainings for trainer username: {} with the specified criteria.", results.size(), username);
-                return Optional.of(results);
             }
-
+            return Optional.of(results);
         } catch (Exception e) {
             log.error("Error retrieving trainings for trainer username: {}", username, e);
             throw new DaoException("Error retrieving trainings for trainer username: " + username, e);
