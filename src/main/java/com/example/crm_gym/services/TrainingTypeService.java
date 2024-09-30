@@ -1,9 +1,7 @@
 package com.example.crm_gym.services;
 
 import com.example.crm_gym.dao.TrainingTypeDAO;
-import com.example.crm_gym.dao.UserDAO;
-import com.example.crm_gym.exception.DaoException;
-import com.example.crm_gym.logger.TransactionLogger;
+import com.example.crm_gym.exception.ServiceException;
 import com.example.crm_gym.models.*;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -15,77 +13,70 @@ import java.util.*;
 @Slf4j
 @Transactional
 @Service
-public class TrainingTypeService extends BaseService<TrainingType> {
+public class  TrainingTypeService extends BaseService<TrainingType> {
 
     private TrainingTypeDAO trainingTypeDAO;
-    private UserDAO userDAO;
 
     @Autowired
-    public TrainingTypeService(TrainingTypeDAO trainingTypeDAO, UserDAO userDAO) {
+    public TrainingTypeService(TrainingTypeDAO trainingTypeDAO) {
         super(trainingTypeDAO);
         this.trainingTypeDAO = trainingTypeDAO;
-        this.userDAO = userDAO;
     }
 
     public Optional<TrainingType> create(TrainingTypeName name) {
-        String transactionId = TransactionLogger.generateTransactionId();
         try {
             TrainingType trainingType = new TrainingType(name);
             Optional<TrainingType> savedTrainingType = trainingTypeDAO.save(trainingType);
             return savedTrainingType;
-        } catch (DaoException e) {
-            log.error("[Transaction ID: {}] - Error creating training type", transactionId, e);
-            throw e;
+        } catch (Exception e) {
+            log.error("Error creating training type", e);
+            throw new ServiceException("Error creating training type", e);
         }
     }
 
     public Optional<TrainingType> update(TrainingType newTrainingType) {
-        String transactionId = TransactionLogger.generateTransactionId();
         try {
             findEntityById(newTrainingType.getId())
-                    .orElseThrow(() -> new DaoException("Training type not found"));
+                    .orElseThrow(() -> new ServiceException("Training type not found"));
             return trainingTypeDAO.update(newTrainingType);
-        } catch (DaoException e) {
-            log.error("[Transaction ID: {}] - Error updating training type with id {}: {}", transactionId, newTrainingType.getId(), e);
-            throw e;
+        } catch (Exception e) {
+            log.error("Error updating training type with id {}: {}", newTrainingType.getId(), e);
+            throw new ServiceException("Error updating training type with id " + newTrainingType.getId(), e);
         }
     }
 
     public boolean delete(Long id) {
-        String transactionId = TransactionLogger.generateTransactionId();
         try {
             TrainingType trainingType = findEntityById(id)
-                    .orElseThrow(() -> new DaoException("Training Type not found"));
+                    .orElseThrow(() -> new ServiceException("Training Type not found"));
             return trainingTypeDAO.delete(trainingType);
-        } catch (DaoException e) {
-            log.error("[Transaction ID: {}] - Error deleting training type with id {}", transactionId, id, e);
-            return false;
+        } catch (Exception e) {
+            log.error("Error deleting training type with id {}", id, e);
+            throw new ServiceException("Error deleting training type with id " + id, e);
         }
     }
 
     public Optional<TrainingType> getTrainingTypeById(Long id) {
-        String transactionId = TransactionLogger.generateTransactionId();
         try {
             return trainingTypeDAO.findById(id);
-        } catch (DaoException e) {
-            log.error("[Transaction ID: {}] - Error fetching training type with id {}", transactionId, id, e);
-            return Optional.empty();
+        } catch (Exception e) {
+            log.error("Error fetching training type with id {}", id, e);
+            throw new ServiceException("Error fetching training type with id " + id, e);
         }
     }
 
     public List<TrainingType> getAllTrainingTypes() {
-        String transactionId = TransactionLogger.generateTransactionId();
         try {
             Optional<List<TrainingType>> trainingTypes = trainingTypeDAO.findAll();
             if (trainingTypes.isPresent()) {
                 return trainingTypes.get();
             } else {
-                log.warn("[Transaction ID: {}] - No training types found.", transactionId);
-                return Collections.emptyList();
+                log.warn("No training types found.");
+                throw new ServiceException("No training types found.");
             }
-        } catch (DaoException e) {
-            log.error("[Transaction ID: {}] - Error fetching all training types", transactionId, e);
-            return Collections.emptyList();
+        } catch (Exception e) {
+            log.error("Error fetching all training types", e);
+            throw new ServiceException("Error fetching all training types", e);
         }
     }
 

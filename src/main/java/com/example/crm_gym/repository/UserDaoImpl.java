@@ -43,11 +43,11 @@ public class UserDaoImpl implements UserDAO {
             return true;
         } catch (Exception e) {
             log.error("Error saving user: {}", user, e);
-            return false;
+            throw new DaoException("Error saving user: " + user, e);
         }
     }
 
-    private String generateUniqueUsername(String firstName, String lastName) {
+    public String generateUniqueUsername(String firstName, String lastName) {
         Optional<List<User>> optionalUsers = findAll();
         List<User> existingUsers = optionalUsers.orElse(Collections.emptyList());
         int suffix = 0;
@@ -125,7 +125,7 @@ public class UserDaoImpl implements UserDAO {
             return Optional.ofNullable(user);
         } catch (NoResultException e) {
             log.warn("No user found with username: {}", username);
-            return Optional.empty();
+            throw new DaoException("No user found with username " + username, e);
         } catch (Exception e) {
             log.error("Error finding user with username " + username, e);
             throw new DaoException("Error finding user with username " + username, e);
@@ -143,7 +143,7 @@ public class UserDaoImpl implements UserDAO {
             return Optional.ofNullable(user);
         } catch (NoResultException e) {
             log.warn("No user found with firstname {} and lastname {}", firstName, lastName);
-            return Optional.empty();
+            throw new DaoException("No user found with firstname " + firstName + " and lastname " + lastName, e);
         } catch (Exception e) {
             log.error("Error finding user with firstname " + firstName + " and lastname " + lastName, e);
             throw new DaoException("Error finding user with firstname " + firstName + " and lastname " + lastName, e);

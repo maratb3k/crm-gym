@@ -5,7 +5,7 @@ import com.example.crm_gym.logger.TransactionLogger;
 import com.example.crm_gym.models.User;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.service.spi.ServiceException;
+import com.example.crm_gym.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,20 +28,18 @@ public class UserService {
             Optional<User> userOptional = userDAO.findByUsername(username);
             if (!userOptional.isPresent()) {
                 log.warn("[Transaction ID: {}] - Authentication failed: User not found for username: {}", transactionId, username);
-                return false;
+                throw new ServiceException("User not found for username: " + username);
             }
-
             User user = userOptional.get();
             if (user.getPassword().equals(password)) {
                 return true;
             } else {
                 log.warn("[Transaction ID: {}] - Authentication failed: Invalid password for username: {}", transactionId, username);
-                return false;
+                throw new ServiceException("Invalid password for username: " + username);
             }
         } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error during authentication for username: {}", transactionId ,username, e);
             throw new ServiceException("Error during authentication for username: " + username, e);
         }
     }
-
 }

@@ -103,7 +103,7 @@ public class TrainerDaoImpl implements TrainerDAO {
             return Optional.of(updatedTrainer);
         } catch (ConstraintViolationException e) {
             log.error("Validation failed: {}", e.getMessage());
-            throw new IllegalArgumentException("Trainer data is invalid: " + e.getConstraintViolations());
+            throw new DaoException("Trainer data is invalid: " + e.getConstraintViolations());
         } catch (Exception e) {
             log.error("Error updating trainer with id: {}", updatedTrainer.getId(), e);
             throw new DaoException("Error updating trainer with id " + updatedTrainer.getId(), e);
@@ -252,7 +252,7 @@ public class TrainerDaoImpl implements TrainerDAO {
     public Optional<List<Training>> findTrainingsByTrainerUsernameAndCriteria(String username, Date fromDate, Date toDate, String traineeName) {
         try {
             return trainingDao.findTrainingsByTrainerUsernameAndCriteria(username, fromDate, toDate, traineeName);
-        } catch (DaoException e) {
+        } catch (Exception e) {
             log.error("Error retrieving trainings for trainer username: {}", username, e);
             throw new DaoException("Error retrieving trainings for trainer username: " + username, e);
         }

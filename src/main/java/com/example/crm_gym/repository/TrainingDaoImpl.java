@@ -1,7 +1,5 @@
 package com.example.crm_gym.repository;
 
-import com.example.crm_gym.dao.TraineeDAO;
-import com.example.crm_gym.dao.TrainerDAO;
 import com.example.crm_gym.dao.TrainingDAO;
 import com.example.crm_gym.exception.DaoException;
 import com.example.crm_gym.models.*;
@@ -11,8 +9,6 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.criteria.*;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Repository;
 
 import java.util.Date;
@@ -26,15 +22,6 @@ public class TrainingDaoImpl implements TrainingDAO {
 
     @PersistenceContext
     private EntityManager entityManager;
-    private final TraineeDAO traineeDAO;
-    private final TrainerDAO trainerDAO;
-
-    @Autowired
-    @Lazy
-    public TrainingDaoImpl(TraineeDAO traineeDAO, TrainerDAO trainerDAO) {
-        this.traineeDAO = traineeDAO;
-        this.trainerDAO = trainerDAO;
-    }
 
     @Override
     public Optional<Training> save(Training training) {

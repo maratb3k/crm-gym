@@ -101,7 +101,7 @@ public class TraineeDaoImpl implements TraineeDAO {
             return Optional.of(updatedTrainee);
         } catch (ConstraintViolationException e) {
             log.error("Validation failed: {}", e.getMessage());
-            throw new IllegalArgumentException("User data is invalid: " + e.getConstraintViolations());
+            throw new DaoException("User data is invalid: " + e.getConstraintViolations());
         } catch (Exception e) {
             log.error("Error updating trainee with id: {}", updatedTrainee.getId(), e);
             throw new DaoException("Error updating trainee with id " + updatedTrainee.getId(), e);
@@ -142,9 +142,6 @@ public class TraineeDaoImpl implements TraineeDAO {
         } catch (NoResultException e) {
             log.warn("userId not found for trainee with username: {}", username, e);
             throw new DaoException("userId not found for trainee with username: " + username, e);
-        } catch (DaoException e) {
-            log.error("Error deleting trainee by username: {}", username, e);
-            throw e;
         } catch (Exception e) {
             log.error("Unexpected error occurred while deleting trainee by username: {}", username, e);
             throw new DaoException("Unexpected error deleting trainee by username " + username, e);
@@ -223,7 +220,7 @@ public class TraineeDaoImpl implements TraineeDAO {
     public Optional<List<Trainer>> findTrainersNotAssignedToTraineeByUsername(String traineeUsername) {
         try {
             return trainerDao.findTrainersNotAssignedToTraineeByUsername(traineeUsername);
-        } catch (DaoException e) {
+        } catch (Exception e) {
             log.error("Error retrieving trainers not assigned to trainee with username: {}", traineeUsername, e);
             throw new DaoException("Error retrieving trainers not assigned to trainee with username: " + traineeUsername, e);
         }
@@ -233,7 +230,7 @@ public class TraineeDaoImpl implements TraineeDAO {
     public Optional<List<Training>> findTrainingsByTraineeUsernameAndCriteria(String username, Date fromDate, Date toDate, String trainerName, String trainingTypeName) {
         try {
             return trainingDao.findTrainingsByTraineeUsernameAndCriteria(username, fromDate, toDate, trainerName, trainingTypeName);
-        } catch (DaoException e) {
+        } catch (Exception e) {
             log.error("Error retrieving trainings for trainee username: {}", username, e);
             throw new DaoException("Error retrieving trainings for trainee username: " + username, e);
         }

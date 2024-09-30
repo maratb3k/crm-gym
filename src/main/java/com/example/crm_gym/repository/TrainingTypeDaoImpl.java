@@ -49,6 +49,7 @@ public class TrainingTypeDaoImpl implements TrainingTypeDAO {
             entityManager.remove(trainingType);
             return true;
         } catch (Exception e) {
+            log.error("Error deleting training type with id: {}", trainingType.getId(), e);
             throw new DaoException("Error deleting training type with id " + trainingType.getId(), e);
         }
     }
@@ -59,6 +60,7 @@ public class TrainingTypeDaoImpl implements TrainingTypeDAO {
             TrainingType trainingType = entityManager.find(TrainingType.class, id);
             return Optional.ofNullable(trainingType);
         } catch (Exception e) {
+            log.error("Error finding training type with id: {}", id, e);
             throw new DaoException("Error finding training type with id " + id, e);
         }
     }
@@ -70,6 +72,7 @@ public class TrainingTypeDaoImpl implements TrainingTypeDAO {
             List<TrainingType> trainingTypes = entityManager.createQuery(hql, TrainingType.class).getResultList();
             return Optional.ofNullable(trainingTypes);
         } catch (Exception e) {
+            log.error("Error finding training type list", e);
             throw new DaoException("Error finding training types", e);
         }
     }

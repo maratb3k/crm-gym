@@ -4,7 +4,7 @@ import com.example.crm_gym.dao.TraineeDAO;
 import com.example.crm_gym.dao.TrainerDAO;
 import com.example.crm_gym.dao.TrainingDAO;
 import com.example.crm_gym.dao.UserDAO;
-import com.example.crm_gym.exception.DaoException;
+import com.example.crm_gym.exception.*;
 import com.example.crm_gym.logger.TransactionLogger;
 import jakarta.validation.ConstraintViolationException;
 import com.example.crm_gym.models.Trainee;
@@ -13,7 +13,6 @@ import com.example.crm_gym.models.Training;
 import com.example.crm_gym.models.User;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.service.spi.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -45,9 +44,9 @@ public class TraineeService extends BaseService<Trainee> {
             User user = new User(firstName, lastName);
             Trainee trainee = new Trainee(dateOfBirth, address, user);
             return traineeDAO.save(trainee);
-        } catch (DaoException e) {
+        } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error creating trainee", transactionId, e.getMessage());
-            throw e;
+            throw new ServiceException("[Transaction ID: {}] - " + transactionId + ".Error creating trainee");
         }
     }
 
@@ -69,10 +68,10 @@ public class TraineeService extends BaseService<Trainee> {
             return traineeDAO.update(existingTrainee);
         } catch (IllegalArgumentException e) {
             log.error(" [Transaction ID: {}] - Invalid or empty input data for trainer update: {}", transactionId, e.getMessage());
-            throw e;
-        } catch (DaoException e) {
+            throw new ServiceException("Invalid or empty input data for trainer update");
+        } catch (Exception e) {
             log.error(" [Transaction ID: {}] - Error updating trainee with id {}: {}", transactionId, updatedTrainee.getId(), e);
-            throw e;
+            throw new ServiceException("Error updating trainee with id " + updatedTrainee.getId());
         }
     }
 
@@ -91,9 +90,9 @@ public class TraineeService extends BaseService<Trainee> {
             } else {
                 throw new ServiceException("Trainee with username " + username + " not found");
             }
-        } catch (DaoException e) {
+        } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error updating trainer list for trainee with username {}: e", transactionId, username, e);
-            throw e;
+            throw new ServiceException("Error while updating trainer list for trainee with username " + username);
         }
     }
 
@@ -110,8 +109,8 @@ public class TraineeService extends BaseService<Trainee> {
             return true;
         } catch (ConstraintViolationException e) {
             log.error("[Transaction ID: {}] - Validation failed: {}", transactionId, e.getMessage());
-            throw new IllegalArgumentException("Trainee data is invalid: " + e.getConstraintViolations());
-        } catch (DaoException e) {
+            throw new ServiceException("Trainee data is invalid: " + e.getConstraintViolations());
+        } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error updating trainee with username {}: {}", transactionId, username, e);
             throw new ServiceException("Error updating trainee with username: " + username, e);
         }
@@ -121,9 +120,9 @@ public class TraineeService extends BaseService<Trainee> {
         String transactionId = TransactionLogger.generateTransactionId();
         try {
             return traineeDAO.delete(trainee);
-        } catch (DaoException e) {
+        } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error deleting trainee with id {}", transactionId, trainee.getId(), e);
-            throw e;
+            throw new ServiceException("Error deleting trainee with id " + trainee.getId());
         }
     }
 
@@ -131,12 +130,9 @@ public class TraineeService extends BaseService<Trainee> {
         String transactionId = TransactionLogger.generateTransactionId();
         try {
             return traineeDAO.deleteByUsername(username);
-        } catch (DaoException e) {
-            log.error("[Transaction ID: {}] - Error deleting trainee by username: {}", transactionId, username, e);
-            throw e;
         } catch (Exception e) {
-            log.error("[Transaction ID: {}] - Unexpected error occurred while deleting trainee by username: {}", transactionId, username, e);
-            throw e;
+            log.error("[Transaction ID: {}] - Error occurred while deleting trainee by username: {}", transactionId, username, e);
+            throw new ServiceException("Error occurred while deleting trainee by username");
         }
     }
 
@@ -146,19 +142,16 @@ public class TraineeService extends BaseService<Trainee> {
             return traineeDAO.findById(id);
         } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error occurred while fetching trainee with id: {}", transactionId, id, e);
-            throw e;
+            throw new ServiceException("Error occurred while fetching trainee with id " + id);
         }
     }
 
     public Optional<Trainee> getTraineeByUsername(String username, String transactionId) {
         try {
             return traineeDAO.findByUsername(username);
-        } catch (DaoException e) {
-            log.error("[Transaction ID: {}] - Error fetching trainee by username: {}", transactionId, username, e);
-            throw e;
         } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error occurred while fetching trainee by username: {}", transactionId, username, e);
-            throw e;
+            throw new ServiceException("Error occurred while fetching trainee by username: " + username);
         }
     }
 
@@ -166,30 +159,27 @@ public class TraineeService extends BaseService<Trainee> {
         String transactionId = TransactionLogger.generateTransactionId();
         try {
             return traineeDAO.findAll();
-        } catch (DaoException e) {
-            log.error("[Transaction ID: {}] - Error fetching all trainees", transactionId, e);
-            throw e;
         } catch (Exception e) {
             log.error("[Transaction ID: {}] - Unexpected error occurred while fetching all trainees", transactionId, e);
-            throw e;
+            throw new ServiceException("Error occurred while fetching all trainees");
         }
     }
 
     public Optional<List<Training>> getTrainingsByTraineeUsernameAndCriteria(String username, Date fromDate, Date toDate, String trainerName, String trainingTypeName, String transactionId) {
         try {
             return traineeDAO.findTrainingsByTraineeUsernameAndCriteria(username, fromDate, toDate, trainerName, trainingTypeName);
-        } catch (DaoException e) {
+        } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error retrieving trainings for trainee with username: {}", transactionId, username, e);
-            throw e;
+            throw new ServiceException("Error retrieving trainings for trainee with username: " + username);
         }
     }
 
     public Optional<List<Trainer>> findTrainersNotAssignedToTraineeByUsername(String username, String transactionId) {
         try {
             return traineeDAO.findTrainersNotAssignedToTraineeByUsername(username);
-        } catch (DaoException e) {
+        } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error retrieving trainers for trainee with username: {}", transactionId, username, e);
-            throw e;
+            throw new ServiceException("Error retrieving trainers for trainee with username: " + username);
         }
     }
 
@@ -201,9 +191,9 @@ public class TraineeService extends BaseService<Trainee> {
             Trainer trainer = trainerDAO.findById(trainerId)
                     .orElseThrow(() -> new DaoException("Trainer not found"));
             return traineeDAO.addTrainer(trainee, trainer);
-        } catch (DaoException e) {
+        } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error adding trainer with id {} to trainee with id {}: {}", transactionId, trainerId, traineeId, e.getMessage());
-            throw e;
+            throw new ServiceException("Error adding trainer with id " + trainerId);
         }
     }
 
@@ -215,9 +205,9 @@ public class TraineeService extends BaseService<Trainee> {
             Training training = trainingDAO.findById(trainingId)
                     .orElseThrow(() -> new DaoException("Training not found"));
             return traineeDAO.addTraining(trainee, training);
-        } catch (DaoException e) {
+        } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error adding training with id {} to trainee with id {}: {}", transactionId, trainingId, traineeId, e.getMessage());
-            throw e;
+            throw new ServiceException("Error adding training with id " + trainingId);
         }
     }
 
@@ -229,9 +219,9 @@ public class TraineeService extends BaseService<Trainee> {
             Trainer trainer = trainerDAO.findById(trainerId)
                     .orElseThrow(() -> new DaoException("Trainer not found"));
             return traineeDAO.deleteTrainerFromList(trainee, trainer);
-        } catch (DaoException e) {
+        } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error removing trainer with id {} from trainee with id {}: {}", transactionId, trainerId, traineeId, e.getMessage());
-            throw e;
+            throw new ServiceException("Error removing trainer with id " + trainerId);
         }
     }
 
@@ -243,9 +233,9 @@ public class TraineeService extends BaseService<Trainee> {
             Training training = trainingDAO.findById(trainingId)
                     .orElseThrow(() -> new DaoException("Training not found"));
             return traineeDAO.deleteTrainingFromList(trainee, training);
-        } catch (DaoException e) {
+        } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error removing training with id {} from trainee with id {}: {}", transactionId, trainingId, traineeId, e.getMessage());
-            throw e;
+            throw new ServiceException("Error removing training with id " + trainingId);
         }
     }
 }

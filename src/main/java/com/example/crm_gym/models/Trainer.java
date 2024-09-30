@@ -28,6 +28,9 @@ public class Trainer {
 
     public Trainer() {}
 
+    public Trainer(User user) {
+        this.user = user;
+    }
 
     public Trainer(TrainingType specialization, User user) {
         this.specialization = specialization;
