@@ -239,4 +239,14 @@ public class TrainerService extends BaseService<Trainer> {
         }
     }
 
+    public boolean deleteByUsername(String username) {
+        String transactionId = TransactionLogger.generateTransactionId();
+        try {
+            return trainerDAO.deleteByUsername(username);
+        } catch (Exception e) {
+            log.error("[Transaction ID: {}] - Error occurred while deleting trainer by username: {}", transactionId, username, e);
+            throw new ServiceException("Error occurred while deleting trainer by username " + username, e);
+        }
+    }
+
 }

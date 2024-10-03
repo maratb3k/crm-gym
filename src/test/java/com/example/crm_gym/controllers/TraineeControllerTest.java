@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -19,6 +20,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@WebMvcTest(TraineeController.class)
 class TraineeControllerTest {
 
     private MockMvc mockMvc;
@@ -70,6 +72,24 @@ class TraineeControllerTest {
                 .andExpect(jsonPath("$.error").value("Trainee already exists."));
 
         verify(traineeService, times(2)).create(eq("John"), eq("Doe"), any(Date.class), eq("St.April, 123"), anyString());
+    }
+
+    @Test
+    void testRegisterTrainee_Success() throws Exception {
+        Trainee mockTrainee = new Trainee();
+        User mockUser = new User();
+        mockUser.setUsername("traineeUser");
+        mockUser.setPassword("password123");
+        mockTrainee.setUser(mockUser);
+        when(traineeService.create("John", "Doe", null, null, "transactionId123"))
+                .thenReturn(Optional.of(mockTrainee));
+
+        mockMvc.perform(post("/register")
+                        .param("firstName", "John")
+                        .param("lastName", "Doe"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.username").value("traineeUser"))
+                .andExpect(jsonPath("$.password").value("password123"));
     }
 
     @Test

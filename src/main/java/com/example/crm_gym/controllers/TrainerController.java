@@ -4,6 +4,7 @@ import com.example.crm_gym.dto.*;
 import com.example.crm_gym.logger.TransactionLogger;
 import com.example.crm_gym.models.*;
 import com.example.crm_gym.services.TrainerService;
+import io.micrometer.core.annotation.Timed;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
@@ -42,6 +43,7 @@ public class TrainerController {
             @ApiResponse(code = 500, message = "Application failed to process the request")
     })
     @ResponseStatus(HttpStatus.CREATED)
+    @Timed(value = "api.response.time", description = "API Response Time for Register Trainer")
     public ResponseEntity<Map<String, String>> registerTrainer(
             @Valid @RequestParam("firstName") String firstName,
             @Valid @RequestParam("lastName") String lastName,
@@ -243,6 +245,32 @@ public class TrainerController {
         } else {
             TransactionLogger.logResponseDetails(transactionId, HttpStatus.NOT_FOUND.value(), "Update trainer's isActive failed");
             TransactionLogger.logTransactionEnd(transactionId, "Update Trainer's isActive");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Trainer not found");
+        }
+    }
+
+    @DeleteMapping("/{username}")
+    @ApiOperation(value = "Delete a trainer by username", response = Trainer.class)
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Successfully deleted the trainer"),
+            @ApiResponse(code = 400, message = "Invalid input data"),
+            @ApiResponse(code = 404, message = "Trainer not found"),
+            @ApiResponse(code = 500, message = "Application failed to process the request")
+    })
+    public ResponseEntity<?> deleteTrainer(@PathVariable String username, HttpServletRequest request) {
+        String transactionId = TransactionLogger.generateTransactionId();
+        TransactionLogger.logTransactionStart(transactionId, "Delete Trainer");
+        TransactionLogger.logRequestDetails(transactionId, request.getMethod(), request.getRequestURI(), request.getParameterMap());
+
+        Optional<Trainer> optionalTrainer = trainerService.getTrainerByUsername(username, transactionId);
+        if (optionalTrainer.isPresent()) {
+            trainerService.delete(optionalTrainer.get());
+            TransactionLogger.logResponseDetails(transactionId, HttpStatus.OK.value(), "getTrainerByUsername");
+            TransactionLogger.logTransactionEnd(transactionId, "Delete Trainer");
+            return ResponseEntity.ok().body("Trainer profile deleted successfully.");
+        } else {
+            TransactionLogger.logResponseDetails(transactionId, HttpStatus.NOT_FOUND.value(), "Error deleting trainer");
+            TransactionLogger.logTransactionEnd(transactionId, "Deleting Trainer Failed");
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Trainer not found");
         }
     }

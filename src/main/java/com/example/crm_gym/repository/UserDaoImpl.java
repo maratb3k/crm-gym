@@ -3,12 +3,15 @@ package com.example.crm_gym.repository;
 import com.example.crm_gym.dao.UserDAO;
 import com.example.crm_gym.exception.DaoException;
 import com.example.crm_gym.models.User;
+import com.example.crm_gym.services.MetricsService;
 import com.example.crm_gym.utils.UserProfileUtil;
+import io.micrometer.core.instrument.Timer;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collections;
@@ -23,16 +26,24 @@ public class UserDaoImpl implements UserDAO {
     @PersistenceContext
     private EntityManager entityManager;
 
+    private final MetricsService metricsService;
+
+    @Autowired
+    public UserDaoImpl(MetricsService metricsService) {
+        this.metricsService = metricsService;
+    }
+
     @Override
     public boolean save(User user) {
+        Timer.Sample timerSample = metricsService.startQueryTimer();
         try {
             Optional<User> optUser = findByFirstAndLastName(user.getFirstName(), user.getLastName());
             if (optUser.isPresent()) {
                 User existingUser = optUser.get();
                 if (existingUser.getTrainer() != null) {
-                    throw new DaoException("User already registered as a Trainer. Cannot register as a Trainee.");
+                    throw new DaoException("User already registered as a Trainer.");
                 } else if (existingUser.getTrainee() != null) {
-                    throw new DaoException("User already registered as a Trainee. Cannot register as a Trainer.");
+                    throw new DaoException("User already registered as a Trainee.");
                 }
             }
             String username = generateUniqueUsername(user.getFirstName(), user.getLastName());
@@ -41,9 +52,13 @@ public class UserDaoImpl implements UserDAO {
             user.setPassword(password);
             entityManager.persist(user);
             return true;
+        } catch (DaoException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Error saving user: {}", user, e);
             throw new DaoException("Error saving user: " + user, e);
+        } finally {
+            metricsService.stopQueryTimer(timerSample, "db.query.execution.time");
         }
     }
 
@@ -136,14 +151,15 @@ public class UserDaoImpl implements UserDAO {
     public Optional<User> findByFirstAndLastName(String firstName, String lastName) {
         try {
             String hql = "FROM User u WHERE u.firstName = :firstName AND u.lastName = :lastName";
-            User user = entityManager.createQuery(hql, User.class)
+            List<User> users = entityManager.createQuery(hql, User.class)
                     .setParameter("firstName", firstName)
                     .setParameter("lastName", lastName)
-                    .getSingleResult();
-            return Optional.ofNullable(user);
-        } catch (NoResultException e) {
-            log.warn("No user found with firstname {} and lastname {}", firstName, lastName);
-            throw new DaoException("No user found with firstname " + firstName + " and lastname " + lastName, e);
+                    .getResultList();
+            if (users.isEmpty()) {
+                return Optional.empty();
+            } else {
+                return Optional.of(users.get(0));
+            }
         } catch (Exception e) {
             log.error("Error finding user with firstname " + firstName + " and lastname " + lastName, e);
             throw new DaoException("Error finding user with firstname " + firstName + " and lastname " + lastName, e);

@@ -3,7 +3,9 @@ package com.example.crm_gym.models;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 @Entity
 @Table(name = "trainees")

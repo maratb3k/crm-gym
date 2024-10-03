@@ -67,7 +67,7 @@ public class TrainingType {
                 "id=" + id +
                 ", name=" + name +
                 ", trainings=" + trainings +
-                ", trainers=" + trainers +
+                ", trainers=" + (trainers != null ? "Trainers size: " + trainers.size() : null) +
                 '}';
     }
 }
