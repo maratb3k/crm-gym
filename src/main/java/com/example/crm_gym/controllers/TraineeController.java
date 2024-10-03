@@ -8,6 +8,7 @@ import com.example.crm_gym.models.Training;
 import com.example.crm_gym.models.User;
 import com.example.crm_gym.services.TraineeService;
 import com.example.crm_gym.services.TrainerService;
+import io.micrometer.core.annotation.Timed;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
@@ -48,6 +49,7 @@ public class TraineeController {
             @ApiResponse(code = 500, message = "Application failed to process the request")
     })
     @ResponseStatus(HttpStatus.CREATED)
+    @Timed(value = "api.response.time", description = "API Response Time for Register Trainee")
     public ResponseEntity<Map<String, String>> registerTrainee(
             @Valid @RequestParam("firstName") String firstName,
             @Valid @RequestParam("lastName") String lastName,
@@ -59,17 +61,22 @@ public class TraineeController {
         TransactionLogger.logTransactionStart(transactionId, "Trainee Registration");
         TransactionLogger.logRequestDetails(transactionId, request.getMethod(), request.getRequestURI(), request.getParameterMap());
 
-        Optional<Trainee> trainee = traineeService.create(firstName, lastName, dateOfBirth, address, transactionId);
-        if (trainee.isPresent()) {
-            Map<String, String> response = new HashMap<>();
-            response.put("username", trainee.get().getUser().getUsername());
-            response.put("password", trainee.get().getUser().getPassword());
-            TransactionLogger.logResponseDetails(transactionId, HttpStatus.CREATED.value(), "Trainee created successfully");
-            TransactionLogger.logTransactionEnd(transactionId, "Trainee Registration");
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } else {
-            TransactionLogger.logResponseDetails(transactionId, HttpStatus.CONFLICT.value(), "Trainee already exists");
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Collections.singletonMap("error", "Trainee already exists."));
+        try {
+            Optional<Trainee> trainee = traineeService.create(firstName, lastName, dateOfBirth, address, transactionId);
+            if (trainee.isPresent()) {
+                Map<String, String> response = new HashMap<>();
+                response.put("username", trainee.get().getUser().getUsername());
+                response.put("password", trainee.get().getUser().getPassword());
+                TransactionLogger.logResponseDetails(transactionId, HttpStatus.CREATED.value(), "Trainee created successfully");
+                TransactionLogger.logTransactionEnd(transactionId, "Trainee Registration");
+                return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            } else {
+                TransactionLogger.logResponseDetails(transactionId, HttpStatus.CONFLICT.value(), "Trainee already exists");
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(Collections.singletonMap("error", "Trainee already exists."));
+            }
+        } catch (Exception e) {
+            log.error("Error occurred while registering trainee", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.singletonMap("error", "Unexpected error occurred: " + e.getMessage()));
         }
     }
 

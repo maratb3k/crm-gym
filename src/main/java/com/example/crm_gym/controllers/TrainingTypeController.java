@@ -1,8 +1,10 @@
 package com.example.crm_gym.controllers;
 
+import com.example.crm_gym.exception.ServiceException;
 import com.example.crm_gym.logger.TransactionLogger;
 import com.example.crm_gym.models.Trainee;
 import com.example.crm_gym.models.TrainingType;
+import com.example.crm_gym.models.TrainingTypeName;
 import com.example.crm_gym.services.TrainingTypeService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
@@ -51,5 +54,20 @@ public class TrainingTypeController {
         TransactionLogger.logResponseDetails(transactionId, HttpStatus.OK.value(), "Retrieving training types");
         TransactionLogger.logTransactionEnd(transactionId, "Get All Training type");
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/create")
+    public ResponseEntity<TrainingType> createTrainingType(@RequestParam TrainingTypeName name) {
+        try {
+            Optional<TrainingType> createdTrainingType = trainingTypeService.create(name);
+            if (createdTrainingType.isPresent()) {
+                return ResponseEntity.status(HttpStatus.CREATED).body(createdTrainingType.get());
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            }
+        } catch (Exception e) {
+            log.error("Error occurred while creating TrainingType", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }

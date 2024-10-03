@@ -41,14 +41,22 @@ public class TraineeService extends BaseService<Trainee> {
 
     public Optional<Trainee> create(String firstName, String lastName, Date dateOfBirth, String address, String transactionId) {
         try {
+            log.info("[Transaction ID: {}] - Creating new Trainee with firstName: {}, lastName: {}", transactionId, firstName, lastName);
+
             User user = new User(firstName, lastName);
             Trainee trainee = new Trainee(dateOfBirth, address, user);
-            return traineeDAO.save(trainee);
+            Optional<Trainee> savedTrainee = traineeDAO.save(trainee);
+            log.info("[Transaction ID: {}] - Successfully created Trainee: {}", transactionId, savedTrainee.orElse(null));
+            return savedTrainee;
+        } catch (DaoException e) {
+            log.error("[Transaction ID: {}] - Error creating trainee: {}", transactionId, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            log.error("[Transaction ID: {}] - Error creating trainee", transactionId, e.getMessage());
-            throw new ServiceException("[Transaction ID: {}] - " + transactionId + ".Error creating trainee");
+            log.error("[Transaction ID: {}] - General error creating trainee: {}", transactionId, e.getMessage(), e);
+            throw new ServiceException("[Transaction ID: " + transactionId + "] - Error creating trainee", e);
         }
     }
+
 
     public Optional<Trainee> update(Trainee updatedTrainee, String transactionId) {
         try {

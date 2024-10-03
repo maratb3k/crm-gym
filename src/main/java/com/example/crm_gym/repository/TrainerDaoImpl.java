@@ -43,7 +43,7 @@ public class TrainerDaoImpl implements TrainerDAO {
         try {
             Optional<User> existingUser = userDao.findByFirstAndLastName(trainer.getUser().getFirstName(), trainer.getUser().getLastName());
             if (existingUser.isPresent() && existingUser.get().getTrainee() != null) {
-                throw new DaoException("User already registered as a Trainee. Cannot register as a Trainer.");
+                throw new DaoException("User already registered. Cannot register as a Trainer.");
             }
             boolean isUserSaved = userDao.save(trainer.getUser());
             if (!isUserSaved) {
@@ -113,11 +113,43 @@ public class TrainerDaoImpl implements TrainerDAO {
     @Override
     public boolean delete(Trainer trainer) {
         try {
-            entityManager.remove(trainer);
+            Trainer attachedTrainer = entityManager.contains(trainer) ? trainer : entityManager.merge(trainer);
+            entityManager.remove(attachedTrainer);
             return true;
         } catch (Exception e) {
             log.error("Error deleting trainer with id: {}", trainer.getId(), e);
             throw new DaoException("Error deleting trainer with id " + trainer.getId(), e);
+        }
+    }
+
+    @Override
+    public boolean deleteByUsername(String username) {
+        try {
+            Optional<User> optionalUser = userDao.findByUsername(username);
+            if (optionalUser.isPresent()) {
+                User user = optionalUser.get();
+                Trainer trainer = entityManager.createQuery("SELECT t FROM Trainer t WHERE t.user.id = :userId", Trainer.class)
+                        .setParameter("userId", user.getUserId())
+                        .getSingleResult();
+                if (trainer != null) {
+                    System.out.println("Deleting trainer with id " + trainer.getUser().getUsername());
+                    Trainer attachedTrainer = entityManager.contains(trainer) ? trainer : entityManager.merge(trainer);
+                    entityManager.remove(attachedTrainer);
+                    return true;
+                } else {
+                    log.error("Trainer associated with user {} not found", username);
+                    throw new DaoException("Trainer associated with user " + username + " not found");
+                }
+            } else {
+                log.error("User with username {} not found", username);
+                throw new DaoException("User with username " + username + " not found");
+            }
+        } catch (NoResultException e) {
+            log.warn("userId not found for trainer with username: {}", username, e);
+            throw new DaoException("userId not found for trainer with username: " + username, e);
+        } catch (Exception e) {
+            log.error("Error occurred while deleting trainer by username: {}", username, e);
+            throw new DaoException("Error deleting trainer by username " + username, e);
         }
     }
 
@@ -179,21 +211,21 @@ public class TrainerDaoImpl implements TrainerDAO {
     @Override
     public Optional<Trainer> findByUsername(String username) {
         try {
-            Optional<User> optionalUser = userDao.findByUsername(username);
-            if (optionalUser.isPresent()) {
-                User user = optionalUser.get();
-                String hql = "FROM Trainer t WHERE t.user.id = :userId";
-                Trainer trainer = entityManager.createQuery(hql, Trainer.class)
-                        .setParameter("userId", user.getUserId())
-                        .getSingleResult();
-                return Optional.ofNullable(trainer);
-            } else {
-                log.error("User with username " + username + " not found");
-                throw new DaoException("Error finding trainer by username " + username);
-            }
+            User user = userDao.findByUsername(username)
+                    .orElseThrow(() -> {
+                        log.error("User with username {} not found", username);
+                        return new DaoException("User with username " + username + " not found");
+                    });
+
+            String hql = "FROM Trainer t WHERE t.user.id = :userId";
+            Trainer trainer = entityManager.createQuery(hql, Trainer.class)
+                    .setParameter("userId", user.getUserId())
+                    .getSingleResult();
+
+            return Optional.ofNullable(trainer);
         } catch (NoResultException e) {
             log.warn("Trainer with username {} not found", username, e);
-            throw new DaoException("Trainer with username " + username + " not found", e);
+            return Optional.empty();
         } catch (Exception e) {
             log.error("Error finding trainer by username: {}", username, e);
             throw new DaoException("Error finding trainer by username " + username, e);

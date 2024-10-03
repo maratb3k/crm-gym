@@ -44,7 +44,7 @@ public class TraineeDaoImpl implements TraineeDAO {
         try {
             Optional<User> existingUser = userDao.findByFirstAndLastName(trainee.getUser().getFirstName(), trainee.getUser().getLastName());
             if (existingUser.isPresent() && existingUser.get().getTrainer() != null) {
-                throw new DaoException("User already registered as a Trainer. Cannot register as a Trainee.");
+                throw new DaoException("User already registered.");
             }
             boolean isUserSaved = userDao.save(trainee.getUser());
             if (!isUserSaved) {
@@ -122,19 +122,20 @@ public class TraineeDaoImpl implements TraineeDAO {
     @Override
     public boolean deleteByUsername(String username) {
         try {
+            entityManager.flush();
+            entityManager.clear();
             Optional<User> optionalUser = userDao.findByUsername(username);
             if (optionalUser.isPresent()) {
                 User user = optionalUser.get();
-                Trainee trainee = entityManager.createQuery("SELECT t FROM Trainee t WHERE t.user.id = :userId", Trainee.class)
+                String hql = "FROM Trainee t WHERE t.user.id = :userId";
+                Trainee trainee = entityManager.createQuery(hql, Trainee.class)
                         .setParameter("userId", user.getUserId())
                         .getSingleResult();
-                if (trainee != null) {
-                    entityManager.remove(trainee);
+                entityManager.refresh(trainee);
+                if (Optional.ofNullable(trainee) != null) {
                     return true;
-                } else {
-                    log.error("Trainee associated with user {} not found", username);
-                    throw new DaoException("Trainee associated with user " + username + " not found");
                 }
+                return false;
             } else {
                 log.error("User with username {} not found", username);
                 throw new DaoException("User with username " + username + " not found");
@@ -194,6 +195,8 @@ public class TraineeDaoImpl implements TraineeDAO {
 
     @Override
     public Optional<Trainee> findByUsername(String username) {
+        entityManager.flush();
+        entityManager.clear();
         try {
             Optional<User> optionalUser = userDao.findByUsername(username);
             if (optionalUser.isPresent()) {
@@ -202,6 +205,8 @@ public class TraineeDaoImpl implements TraineeDAO {
                 Trainee trainee = entityManager.createQuery(hql, Trainee.class)
                         .setParameter("userId", user.getUserId())
                         .getSingleResult();
+                entityManager.refresh(user);
+                entityManager.refresh(trainee);
                 return Optional.ofNullable(trainee);
             } else {
                 log.error("User with username " + username + " not found");

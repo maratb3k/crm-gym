@@ -14,12 +14,12 @@ public class User {
     private Long userId;
 
     @Column(name = "first_name", nullable = false)
-    @Size(min = 5, max = 255, message = "First name must be between 5 and 255 characters")
+    @Size(min = 2, max = 100, message = "First name must be between 2 and 100 characters")
     @NotNull(message = "First Name is required")
     private String firstName;
 
     @Column(name = "last_name", nullable = false)
-    @Size(min = 5, max = 255, message = "Last name must be between 5 and 255 characters")
+    @Size(min = 2, max = 100, message = "Last name must be between 2 and 100 characters")
     @NotNull(message = "Last Name is required")
     private String lastName;
 

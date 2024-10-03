@@ -14,6 +14,7 @@ public interface TrainerDAO extends BaseDAO<Trainer> {
     boolean addTraining(Trainer trainer, Training training);
     Optional<Trainer> update(Trainer trainer);
     boolean delete(Trainer trainer);
+    boolean deleteByUsername(String username);
     Trainer deleteTrainerUser(Trainer trainer);
     boolean deleteTraineeFromList(Trainer trainer, Trainee trainee);
     boolean deleteTrainingFromList(Trainer trainer, Training training);
