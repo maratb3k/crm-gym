@@ -1,6 +1,10 @@
 package com.example.crm_gym.services;
 
 import com.example.crm_gym.dao.*;
+import com.example.crm_gym.dto.TrainerDTO;
+import com.example.crm_gym.dto.TrainingDTO;
+import com.example.crm_gym.dtoConverter.TrainerConverter;
+import com.example.crm_gym.dtoConverter.TrainingConverter;
 import com.example.crm_gym.exception.ServiceException;
 import com.example.crm_gym.logger.TransactionLogger;
 import com.example.crm_gym.models.*;
@@ -24,16 +28,20 @@ public class TrainerService extends BaseService<Trainer> {
     private TrainingDAO trainingDAO;
     private UserDAO userDAO;
     private TrainingTypeDAO trainingTypeDao;
-
+    private TrainerConverter trainerConverter;
+    private TrainingConverter trainingConverter;
 
     @Autowired
-    public TrainerService(TrainerDAO trainerDAO, UserDAO userDAO, TrainingTypeDAO trainingTypeDAO, TraineeDAO traineeDAO, TrainingDAO trainingDAO) {
+    public TrainerService(TrainerDAO trainerDAO, UserDAO userDAO, TrainingTypeDAO trainingTypeDAO, TraineeDAO traineeDAO,
+                          TrainingDAO trainingDAO, TrainerConverter trainerConverter, TrainingConverter trainingConverter) {
         super(trainerDAO);
         this.trainerDAO = trainerDAO;
         this.userDAO = userDAO;
         this.trainingTypeDao = trainingTypeDAO;
         this.traineeDAO = traineeDAO;
         this.trainingDAO = trainingDAO;
+        this.trainerConverter = trainerConverter;
+        this.trainingConverter = trainingConverter;
     }
 
     public Optional<Trainer> create(String firstName, String lastName, Long specializationId, String transactionId) {
@@ -51,24 +59,29 @@ public class TrainerService extends BaseService<Trainer> {
         }
     }
 
-    public Optional<Trainer> update(Trainer updatedTrainer, String transactionId) {
+    public Optional<TrainerDTO> update(Trainer updatedTrainer, String transactionId) {
         try {
             Optional<Trainer> trainer = trainerDAO.findByUsername(updatedTrainer.getUser().getUsername());
             if (!trainer.isPresent()) {
                 log.error("[Transaction ID: {}] - Trainer not found", transactionId);
                 throw new ServiceException("Trainer not found");
             }
+
             Trainer existingTrainer = trainer.get();
             User updatedUser = updatedTrainer.getUser();
             Optional<User> newUser = userDAO.update(updatedUser);
             if (newUser.isPresent()) {
                 existingTrainer.setUser(newUser.get());
             }
+
             existingTrainer.setSpecialization(updatedTrainer.getSpecialization());
-            return trainerDAO.update(existingTrainer);
-        } catch (IllegalArgumentException e) {
-            log.error("[Transaction ID: {}] - Invalid or empty input data for trainer update: {}", transactionId, e.getMessage());
-            throw new ServiceException("Invalid or empty input data for trainer update with id " + updatedTrainer.getId());
+            Optional<Trainer> updatedTrainerEntity = trainerDAO.update(existingTrainer);
+
+            if (updatedTrainerEntity.isPresent()) {
+                return Optional.of(trainerConverter.convertToDto(updatedTrainerEntity.get()));
+            } else {
+                throw new ServiceException("Error while updating trainer with username: " + updatedTrainer.getUser().getUsername());
+            }
         } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error updating trainer with id {}: {}", transactionId, updatedTrainer.getId(), e);
             throw new ServiceException("Error updating trainer with id " + updatedTrainer.getId());
@@ -142,9 +155,16 @@ public class TrainerService extends BaseService<Trainer> {
         }
     }
 
-    public Optional<Trainer> getTrainerByUsername(String username, String transactionId) {
+    public Optional<TrainerDTO> getTrainerByUsername(String username, String transactionId) {
         try {
-            return trainerDAO.findByUsername(username);
+            Optional<Trainer> optionalTrainer = trainerDAO.findByUsername(username);
+            if (optionalTrainer.isPresent()) {
+                TrainerDTO trainerDTO = trainerConverter.convertToDto(optionalTrainer.get());
+                return Optional.of(trainerDTO);
+            } else {
+                log.error("[Transaction ID: {}] - Trainer with username {} not found", transactionId, username);
+                return Optional.empty();
+            }
         } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error fetching trainer by username: {}", transactionId, username, e);
             throw new ServiceException("Error fetching trainer by username: " + username, e);
@@ -170,9 +190,15 @@ public class TrainerService extends BaseService<Trainer> {
         }
     }
 
-    public Optional<List<Training>> getTrainingsByTrainerUsernameAndCriteria(String username, Date fromDate, Date toDate, String traineeName, String transactionId) {
+    public Optional<List<TrainingDTO>> getTrainingsByTrainerUsernameAndCriteria(String username, Date fromDate, Date toDate, String traineeName, String transactionId) {
         try {
-            return trainerDAO.findTrainingsByTrainerUsernameAndCriteria(username, fromDate, toDate, traineeName);
+            Optional<List<Training>> optionalTrainings = trainerDAO.findTrainingsByTrainerUsernameAndCriteria(username, fromDate, toDate, traineeName);
+            if (!optionalTrainings.isPresent()) {
+                log.error("[Transaction ID: {}] - No trainings found for trainer with username: {}", transactionId, username);
+                throw new ServiceException("No trainings found for trainer with username: " + username);
+            }
+            List<TrainingDTO> trainingDTOs = trainingConverter.convertModelListToDtoList(optionalTrainings.get());
+            return Optional.of(trainingDTOs);
         } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error retrieving trainings for trainer with username: {}", transactionId, username, e);
             throw new ServiceException("Error retrieving trainings for trainer with username: " + username, e);
@@ -239,10 +265,16 @@ public class TrainerService extends BaseService<Trainer> {
         }
     }
 
-    public boolean deleteByUsername(String username) {
-        String transactionId = TransactionLogger.generateTransactionId();
+    public boolean deleteTrainerByUsername(String username, String transactionId) {
         try {
-            return trainerDAO.deleteByUsername(username);
+            Optional<Trainer> optionalTrainer = trainerDAO.findByUsername(username);
+            if (!optionalTrainer.isPresent()) {
+                TransactionLogger.logTransactionEnd(transactionId, "Delete Trainer Failed - Trainer Not Found");
+                return false;
+            }
+            Trainer trainer = optionalTrainer.get();
+            trainerDAO.delete(trainer);
+            return true;
         } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error occurred while deleting trainer by username: {}", transactionId, username, e);
             throw new ServiceException("Error occurred while deleting trainer by username " + username, e);

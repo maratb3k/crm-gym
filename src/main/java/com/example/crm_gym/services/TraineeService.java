@@ -4,6 +4,10 @@ import com.example.crm_gym.dao.TraineeDAO;
 import com.example.crm_gym.dao.TrainerDAO;
 import com.example.crm_gym.dao.TrainingDAO;
 import com.example.crm_gym.dao.UserDAO;
+import com.example.crm_gym.dto.*;
+import com.example.crm_gym.dtoConverter.TraineeConverter;
+import com.example.crm_gym.dtoConverter.TrainerConverter;
+import com.example.crm_gym.dtoConverter.TrainingConverter;
 import com.example.crm_gym.exception.*;
 import com.example.crm_gym.logger.TransactionLogger;
 import jakarta.validation.ConstraintViolationException;
@@ -19,6 +23,7 @@ import org.springframework.stereotype.Service;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Transactional
@@ -29,14 +34,21 @@ public class TraineeService extends BaseService<Trainee> {
     private final TraineeDAO traineeDAO;
     private final TrainingDAO trainingDAO;
     private final UserDAO userDAO;
+    private final TraineeConverter traineeConverter;
+    private final TrainingConverter trainingConverter;
+    private final TrainerConverter trainerConverter;
 
     @Autowired
-    public TraineeService(TraineeDAO traineeDAO, UserDAO userDAO, TrainerDAO trainerDAO, TrainingDAO trainingDAO) {
+    public TraineeService(TraineeDAO traineeDAO, UserDAO userDAO, TrainerDAO trainerDAO, TrainingDAO trainingDAO,
+                          TraineeConverter traineeConverter, TrainingConverter trainingConverter, TrainerConverter trainerConverter) {
         super(traineeDAO);
         this.traineeDAO = traineeDAO;
         this.userDAO = userDAO;
         this.trainerDAO = trainerDAO;
         this.trainingDAO = trainingDAO;
+        this.traineeConverter = traineeConverter;
+        this.trainingConverter = trainingConverter;
+        this.trainerConverter = trainerConverter;
     }
 
     public Optional<Trainee> create(String firstName, String lastName, Date dateOfBirth, String address, String transactionId) {
@@ -58,40 +70,52 @@ public class TraineeService extends BaseService<Trainee> {
     }
 
 
-    public Optional<Trainee> update(Trainee updatedTrainee, String transactionId) {
+    public Optional<TraineeDTO> update(String username, String firstName, String lastName,
+                                    Date dateOfBirth, String address, Boolean isActive,
+                                    String transactionId) {
         try {
-            Optional<Trainee> trainee = traineeDAO.findByUsername(updatedTrainee.getUser().getUsername());
-            if (!trainee.isPresent()) {
+            Optional<Trainee> optionalTrainee = traineeDAO.findByUsername(username);
+            if (!optionalTrainee.isPresent()) {
                 log.error("[Transaction ID: {}] - Trainee not found", transactionId);
-                throw new ServiceException("Trainee not found");
+                throw new ServiceException("Trainee not found with username " + username);
             }
-            Trainee existingTrainee = trainee.get();
-            User updatedUser = updatedTrainee.getUser();
-            Optional<User> newUser = userDAO.update(updatedUser);
-            if (newUser.isPresent()) {
-                existingTrainee.setUser(newUser.get());
+
+            Trainee existingTrainee = optionalTrainee.get();
+
+            User existingUser = existingTrainee.getUser();
+            existingUser.setFirstName(firstName);
+            existingUser.setLastName(lastName);
+            existingUser.setActive(isActive);
+
+            Optional<User> updatedUser = userDAO.update(existingUser);
+            if (updatedUser.isPresent()) {
+                existingTrainee.setUser(updatedUser.get());
             }
-            existingTrainee.setAddress(updatedTrainee.getAddress());
-            existingTrainee.setDateOfBirth(updatedTrainee.getDateOfBirth());
-            return traineeDAO.update(existingTrainee);
+            existingTrainee.setAddress(address);
+            existingTrainee.setDateOfBirth(dateOfBirth);
+
+            traineeDAO.update(existingTrainee);
+            return Optional.of(traineeConverter.convertToDto(existingTrainee));
         } catch (IllegalArgumentException e) {
             log.error(" [Transaction ID: {}] - Invalid or empty input data for trainer update: {}", transactionId, e.getMessage());
             throw new ServiceException("Invalid or empty input data for trainer update");
         } catch (Exception e) {
-            log.error(" [Transaction ID: {}] - Error updating trainee with id {}: {}", transactionId, updatedTrainee.getId(), e);
-            throw new ServiceException("Error updating trainee with id " + updatedTrainee.getId());
+            log.error(" [Transaction ID: {}] - Error updating trainee with username {}: {}", transactionId, username, e);
+            throw new ServiceException("Error updating trainee with username " + username);
         }
     }
 
-    public List<Trainer> updateTraineeTrainers(String username, List<Trainer> trainers, String transactionId) {
+    public List<TrainerDTO> updateTraineeTrainers(String username, List<Trainer> trainers, String transactionId) {
         try {
             Optional<Trainee> optionalTrainee = traineeDAO.findByUsername(username);
             if (optionalTrainee.isPresent()) {
                 Trainee trainee = optionalTrainee.get();
                 trainee.setTrainers(trainers);
+
                 Optional<Trainee> optUpdatedTrainee = traineeDAO.update(trainee);
-                if(optUpdatedTrainee.isPresent()) {
-                    return optUpdatedTrainee.get().getTrainers();
+                if (optUpdatedTrainee.isPresent()) {
+                    List<Trainer> updatedTrainers = optUpdatedTrainee.get().getTrainers();
+                    return trainerConverter.convertModelListToDtoList(updatedTrainers);
                 } else {
                     throw new ServiceException("Error while updating trainers list for Trainee with username: " + username);
                 }
@@ -124,13 +148,20 @@ public class TraineeService extends BaseService<Trainee> {
         }
     }
 
-    public boolean delete(Trainee trainee) {
-        String transactionId = TransactionLogger.generateTransactionId();
+    public boolean deleteTraineeByUsername(String username, String transactionId) {
         try {
-            return traineeDAO.delete(trainee);
+            Optional<Trainee> optionalTrainee = traineeDAO.findByUsername(username);
+            if (!optionalTrainee.isPresent()) {
+                TransactionLogger.logTransactionEnd(transactionId, "Delete Trainee Failed - Trainee Not Found");
+                return false;
+            }
+            Trainee trainee = optionalTrainee.get();
+            traineeDAO.delete(trainee);
+            return true;
         } catch (Exception e) {
-            log.error("[Transaction ID: {}] - Error deleting trainee with id {}", transactionId, trainee.getId(), e);
-            throw new ServiceException("Error deleting trainee with id " + trainee.getId());
+            log.error("[Transaction ID: {}] - Error deleting trainee with username {}", transactionId, username, e);
+            TransactionLogger.logTransactionEnd(transactionId, "Delete Trainee Failed - Exception Occurred");
+            throw new ServiceException("Error deleting trainee with username " + username, e);
         }
     }
 
@@ -154,9 +185,16 @@ public class TraineeService extends BaseService<Trainee> {
         }
     }
 
-    public Optional<Trainee> getTraineeByUsername(String username, String transactionId) {
+    public Optional<TraineeDTO> getTraineeByUsername(String username, String transactionId) {
         try {
-            return traineeDAO.findByUsername(username);
+            Optional<Trainee> optionalTrainee =  traineeDAO.findByUsername(username);
+            if(!optionalTrainee.isPresent()) {
+                log.error("[Transaction ID: {}] - Trainee not found: {}", transactionId, username);
+                throw new ServiceException("Trainee with username " + username + " not found");
+            }
+            Trainee trainee = optionalTrainee.get();
+            TraineeDTO traineeDTO = traineeConverter.convertToDto(trainee);
+            return Optional.ofNullable(traineeDTO);
         } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error occurred while fetching trainee by username: {}", transactionId, username, e);
             throw new ServiceException("Error occurred while fetching trainee by username: " + username);
@@ -173,18 +211,40 @@ public class TraineeService extends BaseService<Trainee> {
         }
     }
 
-    public Optional<List<Training>> getTrainingsByTraineeUsernameAndCriteria(String username, Date fromDate, Date toDate, String trainerName, String trainingTypeName, String transactionId) {
+    public Optional<List<TrainingDTO>> getTrainingsByTraineeUsernameAndCriteria(String username, Date fromDate,
+                                                                             Date toDate, String trainerName,
+                                                                             String trainingTypeName, String transactionId) {
         try {
-            return traineeDAO.findTrainingsByTraineeUsernameAndCriteria(username, fromDate, toDate, trainerName, trainingTypeName);
+            Optional<List<Training>> optionalTrainings = traineeDAO.findTrainingsByTraineeUsernameAndCriteria(
+                    username, fromDate, toDate, trainerName, trainingTypeName);
+
+            if (!optionalTrainings.isPresent() || optionalTrainings.get().isEmpty()) {
+                TransactionLogger.logTransactionEnd(transactionId, "Get Trainee Trainings Failed - No Trainings Found");
+                return Optional.empty();
+            }
+            List<TrainingDTO> trainingDTOs = trainingConverter.convertModelListToDtoList(optionalTrainings.get());
+            return Optional.of(trainingDTOs);
         } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error retrieving trainings for trainee with username: {}", transactionId, username, e);
             throw new ServiceException("Error retrieving trainings for trainee with username: " + username);
         }
     }
 
-    public Optional<List<Trainer>> findTrainersNotAssignedToTraineeByUsername(String username, String transactionId) {
+    public Optional<List<TrainerDTO>> findTrainersNotAssignedToTraineeByUsername(String username, Boolean isActive, String transactionId) {
         try {
-            return traineeDAO.findTrainersNotAssignedToTraineeByUsername(username);
+            Optional<List<Trainer>> optionalTrainers = traineeDAO.findTrainersNotAssignedToTraineeByUsername(username);
+
+            if (!optionalTrainers.isPresent() || optionalTrainers.get().isEmpty()) {
+                log.error("[Transaction ID: {}] - No trainers found for trainee with username: {}", transactionId, username);
+                return Optional.empty();
+            }
+
+            List<Trainer> filteredTrainers = optionalTrainers.get().stream()
+                    .filter(trainer -> trainer.getUser().isActive() == isActive)
+                    .collect(Collectors.toList());
+
+            List<TrainerDTO> trainerDTOs = trainerConverter.convertModelListToDtoList(filteredTrainers);
+            return Optional.of(trainerDTOs);
         } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error retrieving trainers for trainee with username: {}", transactionId, username, e);
             throw new ServiceException("Error retrieving trainers for trainee with username: " + username);
