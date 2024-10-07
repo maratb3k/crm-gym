@@ -2,7 +2,6 @@ package com.example.crm_gym.controllers;
 
 import com.example.crm_gym.logger.TransactionLogger;
 import com.example.crm_gym.models.Trainee;
-import com.example.crm_gym.models.Trainer;
 import com.example.crm_gym.models.Training;
 import com.example.crm_gym.services.TraineeService;
 import com.example.crm_gym.services.TrainerService;
@@ -41,7 +40,7 @@ public class TrainingController {
         this.trainerService = trainerService;
     }
 
-    @PostMapping("/create")
+    @PostMapping
     @ApiOperation(value = "Create a training", response = Trainee.class)
     @ApiResponses(value = {
             @ApiResponse(code = 201, message = "Successfully created a training"),
@@ -61,29 +60,16 @@ public class TrainingController {
         TransactionLogger.logTransactionStart(transactionId, "Create Training");
         TransactionLogger.logRequestDetails(transactionId, request.getMethod(), request.getRequestURI(), request.getParameterMap());
 
-        Optional<Trainee> optionalTrainee = traineeService.getTraineeByUsername(traineeUsername, transactionId);
-        if (!optionalTrainee.isPresent()) {
-            TransactionLogger.logResponseDetails(transactionId, HttpStatus.NOT_FOUND.value(), "Error creating trainer");
-            TransactionLogger.logTransactionEnd(transactionId, "Trainer Registration Failed");
+        Optional<Training> createdTraining = trainingService.create(
+                traineeUsername, trainerUsername, trainingName, trainingDate, trainingDuration, transactionId);
+
+        if (!createdTraining.isPresent()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Collections.singletonMap("error", "Trainee not found"));
+                    .body(Collections.singletonMap("error", "Trainee or Trainer not found"));
         }
 
-        Optional<Trainer> optionalTrainer = trainerService.getTrainerByUsername(trainerUsername, transactionId);
-        if (!optionalTrainer.isPresent()) {
-            TransactionLogger.logResponseDetails(transactionId, HttpStatus.NOT_FOUND.value(), "Error creating training");
-            TransactionLogger.logTransactionEnd(transactionId, "Create Training");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Collections.singletonMap("error", "Trainer not found"));
-        }
-
-        Trainee trainee = optionalTrainee.get();
-        Trainer trainer = optionalTrainer.get();
-        Training newTraining = new Training(trainee, trainer, trainingName, trainingDate, trainingDuration);
-        trainingService.create(newTraining);
-        TransactionLogger.logResponseDetails(transactionId, HttpStatus.OK.value(), "Creating training");
-        TransactionLogger.logTransactionEnd(transactionId, "Create Training");
-        return ResponseEntity.ok(Collections.singletonMap("status", "Training successfully created"));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(Collections.singletonMap("message", "Training created successfully"));
     }
 
 }

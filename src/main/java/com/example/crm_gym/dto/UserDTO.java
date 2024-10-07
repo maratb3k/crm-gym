@@ -1,5 +1,6 @@
 package com.example.crm_gym.dto;
 
+import com.example.crm_gym.models.User;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -103,5 +104,14 @@ public class UserDTO {
 
     public void setTrainer(TrainerDTO trainer) {
         this.trainer = trainer;
+    }
+
+    public static UserDTO convertToDTO(User user) {
+        return new UserDTO(
+                user.getUsername(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.isActive()
+        );
     }
 }

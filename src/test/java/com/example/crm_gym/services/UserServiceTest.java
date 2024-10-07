@@ -41,8 +41,8 @@ class UserServiceTest {
         when(userDAO.findByUsername(username)).thenReturn(userOptional);
 
         if ("success".equals(expectedResult)) {
-            boolean result = userService.authenticateUser(username, password);
-            assertTrue(result);
+            Optional<User> result = userService.authenticateUser(username, password);
+            assertTrue(result.isPresent());
         } else {
             ServiceException exception = assertThrows(ServiceException.class, () -> {
                 userService.authenticateUser(username, password);

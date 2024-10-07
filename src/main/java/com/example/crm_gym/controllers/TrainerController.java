@@ -19,7 +19,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @RestController
 @Slf4j
@@ -34,7 +33,7 @@ public class TrainerController {
         this.trainerService = trainerService;
     }
 
-    @PostMapping("/register")
+    @PostMapping
     @ApiOperation(value = "Create a trainer", response = Trainer.class)
     @ApiResponses(value = {
             @ApiResponse(code = 201, message = "Successfully created a trainer"),
@@ -84,32 +83,11 @@ public class TrainerController {
         TransactionLogger.logTransactionStart(transactionId, "Get Trainer By Username");
         TransactionLogger.logRequestDetails(transactionId, request.getMethod(), request.getRequestURI(), request.getParameterMap());
 
-        Optional<Trainer> optionalTrainer = trainerService.getTrainerByUsername(username, transactionId);
-        if (optionalTrainer.isPresent()) {
-            Trainer trainer = optionalTrainer.get();
-            User user = trainer.getUser();
-            UserDTO userDTO = new UserDTO(
-                    user.getFirstName(),
-                    user.getLastName(),
-                    user.isActive()
-            );
-            List<TraineeDTO> traineeDTOs = trainer.getTrainees().stream()
-                    .map(trainee -> new TraineeDTO(
-                            new UserDTO(
-                                    trainee.getUser().getUsername(),
-                                    trainee.getUser().getFirstName(),
-                                    trainee.getUser().getLastName()
-                            )
-                    )).collect(Collectors.toList());
-
-            TrainerDTO trainerDTO = new TrainerDTO(
-                    userDTO,
-                    new TrainingTypeDTO(trainer.getSpecialization().getName())
-            );
-            trainerDTO.setTrainees(traineeDTOs);
+        Optional<TrainerDTO> optionalTrainerDTO = trainerService.getTrainerByUsername(username, transactionId);
+        if (optionalTrainerDTO.isPresent()) {
             TransactionLogger.logResponseDetails(transactionId, HttpStatus.OK.value(), "Trainer By Username retrieved successfully");
             TransactionLogger.logTransactionEnd(transactionId, "Get Trainer By Username");
-            return ResponseEntity.ok(trainerDTO);
+            return ResponseEntity.ok(optionalTrainerDTO.get());
         } else {
             TransactionLogger.logResponseDetails(transactionId, HttpStatus.NOT_FOUND.value(), "Error retrieving trainer by username");
             TransactionLogger.logTransactionEnd(transactionId, "Get Trainer By Username Failed");
@@ -117,7 +95,7 @@ public class TrainerController {
         }
     }
 
-    @PutMapping("/update")
+    @PutMapping
     @ApiOperation(value = "Update a trainer", response = Trainer.class)
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "Successfully updated the trainer"),
@@ -138,40 +116,16 @@ public class TrainerController {
 
         User newUser = new User(username, firstName, lastName, isActive);
         Trainer newTrainer = new Trainer(specialization, newUser);
-        Optional<Trainer> optionalTrainer = trainerService.update(newTrainer, transactionId);
 
-        if (optionalTrainer.isPresent()) {
-            Trainer trainer = optionalTrainer.get();
-            User user = trainer.getUser();
-            UserDTO userDTO = new UserDTO(
-                    user.getUsername(),
-                    user.getFirstName(),
-                    user.getLastName(),
-                    user.isActive()
-            );
-
-            List<TraineeDTO> traineeDTOs = trainer.getTrainees().stream()
-                    .map(trainee -> new TraineeDTO(
-                            new UserDTO(
-                                    trainee.getUser().getUsername(),
-                                    trainee.getUser().getFirstName(),
-                                    trainee.getUser().getLastName(),
-                                    trainee.getUser().isActive()
-                            )
-                    )).collect(Collectors.toList());
-
-            TrainerDTO responseDTO = new TrainerDTO(
-                    userDTO,
-                    new TrainingTypeDTO(trainer.getSpecialization().getName())
-            );
-            responseDTO.setTrainees(traineeDTOs);
+        Optional<TrainerDTO> optionalTrainerDTO = trainerService.update(newTrainer, transactionId);
+        if (optionalTrainerDTO.isPresent()) {
+            TrainerDTO trainerDTO = optionalTrainerDTO.get();
             TransactionLogger.logResponseDetails(transactionId, HttpStatus.OK.value(), "Trainer updated successfully");
             TransactionLogger.logTransactionEnd(transactionId, "Update Trainer");
-            return ResponseEntity.ok(responseDTO);
+            return ResponseEntity.ok(trainerDTO);
         } else {
             TransactionLogger.logResponseDetails(transactionId, HttpStatus.NOT_FOUND.value(), "Error updating trainer");
             TransactionLogger.logTransactionEnd(transactionId, "Trainer Update Failed");
-            log.error("Trainer with username {} not found", username);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Trainer not found");
         }
     }
@@ -194,36 +148,21 @@ public class TrainerController {
         TransactionLogger.logTransactionStart(transactionId, "Get Trainer's Trainings");
         TransactionLogger.logRequestDetails(transactionId, request.getMethod(), request.getRequestURI(), request.getParameterMap());
 
-        Optional<List<Training>> optionalTrainings = trainerService.getTrainingsByTrainerUsernameAndCriteria(username, fromDate, toDate, traineeName, transactionId);
-
-        if (!optionalTrainings.isPresent() || optionalTrainings.get().isEmpty()) {
-            TransactionLogger.logResponseDetails(transactionId, HttpStatus.NOT_FOUND.value(), "Error returning trainer's trainings");
+        Optional<List<TrainingDTO>> optionalTrainingDTOs = trainerService.getTrainingsByTrainerUsernameAndCriteria(username,
+                fromDate, toDate, traineeName, transactionId);
+        if (optionalTrainingDTOs.isPresent() && !optionalTrainingDTOs.get().isEmpty()) {
+            TransactionLogger.logResponseDetails(transactionId, HttpStatus.OK.value(), "Trainer's Trainings returned successfully");
+            TransactionLogger.logTransactionEnd(transactionId, "Get Trainer's Trainings");
+            return ResponseEntity.ok(optionalTrainingDTOs.get());
+        } else {
+            TransactionLogger.logResponseDetails(transactionId, HttpStatus.NOT_FOUND.value(), "No trainings found for the given criteria");
             TransactionLogger.logTransactionEnd(transactionId, "Get Trainer's Trainings");
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Collections.singletonMap("error", "No trainings found for the given criteria"));
         }
-
-        List<TrainingDTO> trainingDTOList = optionalTrainings.get().stream().map(training -> {
-            TraineeDTO traineeDTO = new TraineeDTO(
-                    new UserDTO(
-                            training.getTrainee().getUser().getUsername()
-                    )
-            );
-
-            return new TrainingDTO(
-                    training.getTrainingName(),
-                    training.getTrainingDate(),
-                    new TrainingTypeDTO(training.getTrainingType().getName()),
-                    training.getTrainingDuration(),
-                    traineeDTO
-            );
-        }).collect(Collectors.toList());
-        TransactionLogger.logResponseDetails(transactionId, HttpStatus.OK.value(), "Trainer's Trainings returned successfully");
-        TransactionLogger.logTransactionEnd(transactionId, "Get Trainer's Trainings ");
-        return ResponseEntity.ok(trainingDTOList);
     }
 
-    @PatchMapping("/update/active")
+    @PatchMapping("/active")
     @ApiOperation(value = "Update trainer's isActive", response = Trainer.class)
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "Trainer activation status updated successfully."),
@@ -262,16 +201,11 @@ public class TrainerController {
         TransactionLogger.logTransactionStart(transactionId, "Delete Trainer");
         TransactionLogger.logRequestDetails(transactionId, request.getMethod(), request.getRequestURI(), request.getParameterMap());
 
-        Optional<Trainer> optionalTrainer = trainerService.getTrainerByUsername(username, transactionId);
-        if (optionalTrainer.isPresent()) {
-            trainerService.delete(optionalTrainer.get());
-            TransactionLogger.logResponseDetails(transactionId, HttpStatus.OK.value(), "getTrainerByUsername");
-            TransactionLogger.logTransactionEnd(transactionId, "Delete Trainer");
-            return ResponseEntity.ok().body("Trainer profile deleted successfully.");
+        boolean isDeleted = trainerService.deleteTrainerByUsername(username, transactionId);
+        if (isDeleted) {
+            return ResponseEntity.ok().body("Trainee profile deleted successfully.");
         } else {
-            TransactionLogger.logResponseDetails(transactionId, HttpStatus.NOT_FOUND.value(), "Error deleting trainer");
-            TransactionLogger.logTransactionEnd(transactionId, "Deleting Trainer Failed");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Trainer not found");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Trainee not found.");
         }
     }
 

@@ -1,7 +1,9 @@
 package com.example.crm_gym.services;
 
+import com.example.crm_gym.dao.TraineeDAO;
+import com.example.crm_gym.dao.TrainerDAO;
 import com.example.crm_gym.dao.TrainingDAO;
-import com.example.crm_gym.dao.UserDAO;
+import com.example.crm_gym.exception.DaoException;
 import com.example.crm_gym.exception.ServiceException;
 import com.example.crm_gym.logger.TransactionLogger;
 import com.example.crm_gym.models.*;
@@ -18,21 +20,30 @@ import java.util.*;
 public class TrainingService extends BaseService<Training> {
 
     private TrainingDAO trainingDAO;
-    private UserDAO userDAO;
+    private TraineeDAO traineeDAO;
+    private TrainerDAO trainerDAO;
 
     @Autowired
-    public TrainingService(TrainingDAO trainingDAO, UserDAO userDAO) {
+    public TrainingService(TrainingDAO trainingDAO, TraineeDAO traineeDAO, TrainerDAO trainerDAO) {
         super(trainingDAO);
         this.trainingDAO = trainingDAO;
-        this.userDAO = userDAO;
+        this.traineeDAO = traineeDAO;
+        this.trainerDAO = trainerDAO;
     }
 
-    public Optional<Training> create(Training training) {
-        String transactionId = TransactionLogger.generateTransactionId();
+    public Optional<Training> create(String traineeUsername, String trainerUsername, String trainingName,
+                                     Date trainingDate, int trainingDuration, String transactionId) {
         try {
-            return trainingDAO.save(training);
+            Trainee trainee = traineeDAO.findByUsername(traineeUsername)
+                    .orElseThrow(() -> new DaoException("Trainee not found"));
+            Trainer trainer = trainerDAO.findByUsername(trainerUsername)
+                    .orElseThrow(() -> new DaoException("Trainer not found"));
+            Training newTraining = new Training(trainee, trainer, trainingName, trainingDate, trainingDuration);
+            Optional<Training> savedTraining = trainingDAO.save(newTraining);
+            return savedTraining;
         } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error creating training", transactionId, e);
+            TransactionLogger.logTransactionEnd(transactionId, "Create Training Failed - Exception Occurred");
             throw new ServiceException("Error creating training", e);
         }
     }

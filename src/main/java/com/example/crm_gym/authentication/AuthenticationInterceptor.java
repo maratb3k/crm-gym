@@ -1,5 +1,6 @@
 package com.example.crm_gym.authentication;
 
+import com.example.crm_gym.models.User;
 import com.example.crm_gym.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -10,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Optional;
 
 @Component
 public class AuthenticationInterceptor implements HandlerInterceptor {
@@ -34,8 +36,8 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         String username = values[0];
         String password = values[1];
 
-        boolean isAuthenticated = userService.authenticateUser(username, password);
-        if (!isAuthenticated) {
+        Optional<User> user = userService.authenticateUser(username, password);
+        if (user.isPresent()) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("{\"error\":\"Invalid username or password.\"}");
             return false;
