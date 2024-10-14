@@ -5,10 +5,13 @@ import com.example.crm_gym.exception.EntityNotFoundException;
 import com.example.crm_gym.exception.InvalidCredentialsException;
 import com.example.crm_gym.logger.TransactionLogger;
 import com.example.crm_gym.models.User;
+import com.example.crm_gym.security.BruteForceProtectionService;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import com.example.crm_gym.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.LockedException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -17,30 +20,42 @@ import java.util.Optional;
 @Transactional
 @Service
 public class UserService {
+    private PasswordEncoder passwordEncoder;
     private UserDAO userDAO;
+    private BruteForceProtectionService bruteForceProtectionService;
 
     @Autowired
-    public UserService(UserDAO userDAO) {
+    public UserService(UserDAO userDAO, PasswordEncoder passwordEncoder, BruteForceProtectionService bruteForceProtectionService) {
         this.userDAO = userDAO;
+        this.passwordEncoder = passwordEncoder;
+        this.bruteForceProtectionService = bruteForceProtectionService;
     }
 
     public Optional<User> authenticateUser(String username, String password) {
         String transactionId = TransactionLogger.generateTransactionId();
         try {
+            if (bruteForceProtectionService.isBlocked(username)) {
+                log.warn("[Transaction ID: {}] - User account is locked due to multiple failed login attempts");
+                throw new LockedException("User account is locked due to multiple failed login attempts. Try again later.");
+            }
+
             Optional<User> userOptional = userDAO.findByUsername(username);
             if (!userOptional.isPresent()) {
                 log.warn("[Transaction ID: {}] - Authentication failed: User not found for username: {}", transactionId, username);
                 throw new EntityNotFoundException("User with username " + username + " not found.");
             }
             User user = userOptional.get();
-            if (!user.getPassword().equals(password)) {
+
+            if (!passwordEncoder.matches(password, user.getPassword())) {
+                bruteForceProtectionService.loginFailed(username);
                 log.warn("[Transaction ID: {}] - Authentication failed: Invalid password for username: {}", transactionId, username);
                 throw new InvalidCredentialsException("Invalid password for username: " + username);
             }
+            bruteForceProtectionService.loginSucceeded(username);
             return Optional.of(user);
         } catch (Exception e) {
             log.error("[Transaction ID: {}] - Error during authentication for username: {}", transactionId ,username, e);
-            throw new ServiceException("Error during authentication for username: " + username, e);
+            throw e;
         }
     }
 

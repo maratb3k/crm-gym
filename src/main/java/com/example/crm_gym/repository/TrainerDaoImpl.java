@@ -132,7 +132,6 @@ public class TrainerDaoImpl implements TrainerDAO {
                         .setParameter("userId", user.getUserId())
                         .getSingleResult();
                 if (trainer != null) {
-                    System.out.println("Deleting trainer with id " + trainer.getUser().getUsername());
                     Trainer attachedTrainer = entityManager.contains(trainer) ? trainer : entityManager.merge(trainer);
                     entityManager.remove(attachedTrainer);
                     return true;

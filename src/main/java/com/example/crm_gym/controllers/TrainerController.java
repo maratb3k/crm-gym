@@ -4,6 +4,7 @@ import com.example.crm_gym.dto.*;
 import com.example.crm_gym.logger.TransactionLogger;
 import com.example.crm_gym.models.*;
 import com.example.crm_gym.services.TrainerService;
+import com.example.crm_gym.utils.JwtUtil;
 import io.micrometer.core.annotation.Timed;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -27,10 +28,12 @@ import java.util.*;
 public class TrainerController {
 
     private final TrainerService trainerService;
+    private final JwtUtil jwtUtil;
 
     @Autowired
-    public TrainerController(TrainerService trainerService) {
+    public TrainerController(TrainerService trainerService, JwtUtil jwtUtil) {
         this.trainerService = trainerService;
+        this.jwtUtil = jwtUtil;
     }
 
     @PostMapping
@@ -54,9 +57,11 @@ public class TrainerController {
 
         Optional<Trainer> trainer = trainerService.create(firstName, lastName, specializationId, transactionId);
         if (trainer.isPresent()) {
+            String token = jwtUtil.generateToken(trainer.get().getUser().getUsername());
             Map<String, String> response = new HashMap<>();
             response.put("username", trainer.get().getUser().getUsername());
             response.put("password", trainer.get().getUser().getPassword());
+            response.put("token", "Bearer " + token);
             TransactionLogger.logResponseDetails(transactionId, HttpStatus.OK.value(), "Trainer created successfully");
             TransactionLogger.logTransactionEnd(transactionId, "Trainer Registration");
             return ResponseEntity.ok(response);
