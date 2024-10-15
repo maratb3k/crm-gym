@@ -167,7 +167,7 @@ public class TrainerController {
         }
     }
 
-    @PatchMapping("/active")
+    @PatchMapping
     @ApiOperation(value = "Update trainer's isActive", response = Trainer.class)
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "Trainer activation status updated successfully."),

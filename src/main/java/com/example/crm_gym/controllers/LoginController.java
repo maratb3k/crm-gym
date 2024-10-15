@@ -5,11 +5,8 @@ import com.example.crm_gym.utils.JwtUtil;
 import io.swagger.annotations.Api;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -31,9 +28,10 @@ public class LoginController {
     private JwtUtil jwtUtil;
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> loginUser(
-            @RequestParam("username") String username,
-            @RequestParam("password") String password) {
+    public ResponseEntity<Map<String, String>> loginUser(@RequestBody Map<String, String> loginData) {
+        String username = loginData.get("username");
+        String password = loginData.get("password");
+
         userService.authenticateUser(username, password);
         String token = jwtUtil.generateToken(username);
         Map<String, String> response = new HashMap<>();
@@ -42,13 +40,12 @@ public class LoginController {
     }
 
     @PutMapping("/changepassword")
-    public ResponseEntity<Map<String, String>> changePassword(
-            @RequestParam("username") String username,
-            @RequestParam("oldPassword") String oldPassword,
-            @RequestParam("newPassword") String newPassword) {
+    public ResponseEntity<Map<String, String>> changePassword(@RequestBody Map<String, String> passwordData) {
+        String username = passwordData.get("username");
+        String oldPassword = passwordData.get("oldPassword");
+        String newPassword = passwordData.get("newPassword");
 
         userService.changePassword(username, oldPassword, newPassword);
-
         Map<String, String> response = new HashMap<>();
         response.put("message", "Password updated successfully.");
         return ResponseEntity.ok(response);
