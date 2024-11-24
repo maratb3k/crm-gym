@@ -12,6 +12,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collections;
@@ -27,10 +28,12 @@ public class UserDaoImpl implements UserDAO {
     private EntityManager entityManager;
 
     private final MetricsService metricsService;
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    public UserDaoImpl(MetricsService metricsService) {
+    public UserDaoImpl(MetricsService metricsService, PasswordEncoder passwordEncoder) {
         this.metricsService = metricsService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -47,9 +50,10 @@ public class UserDaoImpl implements UserDAO {
                 }
             }
             String username = generateUniqueUsername(user.getFirstName(), user.getLastName());
-            String password = UserProfileUtil.generatePassword();
+            String pass = UserProfileUtil.generatePassword();
+            String hashPass = passwordEncoder.encode(pass);
             user.setUsername(username);
-            user.setPassword(password);
+            user.setPassword(hashPass);
             entityManager.persist(user);
             return true;
         } catch (DaoException e) {

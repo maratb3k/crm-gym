@@ -6,6 +6,7 @@ import com.example.crm_gym.models.Trainee;
 import com.example.crm_gym.models.Trainer;
 import com.example.crm_gym.services.TraineeService;
 import com.example.crm_gym.services.TrainerService;
+import com.example.crm_gym.utils.JwtUtil;
 import io.micrometer.core.annotation.Timed;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -30,11 +31,13 @@ public class TraineeController {
 
     private final TraineeService traineeService;
     private final TrainerService trainerService;
+    private final JwtUtil jwtUtil;
 
     @Autowired
-    public TraineeController(TraineeService traineeService, TrainerService trainerService) {
+    public TraineeController(TraineeService traineeService, TrainerService trainerService, JwtUtil jwtUtil) {
         this.traineeService = traineeService;
         this.trainerService = trainerService;
+        this.jwtUtil = jwtUtil;
     }
 
     @PostMapping
@@ -58,22 +61,19 @@ public class TraineeController {
         TransactionLogger.logTransactionStart(transactionId, "Trainee Registration");
         TransactionLogger.logRequestDetails(transactionId, request.getMethod(), request.getRequestURI(), request.getParameterMap());
 
-        try {
-            Optional<Trainee> trainee = traineeService.create(firstName, lastName, dateOfBirth, address, transactionId);
-            if (trainee.isPresent()) {
-                Map<String, String> response = new HashMap<>();
-                response.put("username", trainee.get().getUser().getUsername());
-                response.put("password", trainee.get().getUser().getPassword());
-                TransactionLogger.logResponseDetails(transactionId, HttpStatus.CREATED.value(), "Trainee created successfully");
-                TransactionLogger.logTransactionEnd(transactionId, "Trainee Registration");
-                return ResponseEntity.status(HttpStatus.CREATED).body(response);
-            } else {
-                TransactionLogger.logResponseDetails(transactionId, HttpStatus.CONFLICT.value(), "Trainee already exists");
-                return ResponseEntity.status(HttpStatus.CONFLICT).body(Collections.singletonMap("error", "Trainee already exists."));
-            }
-        } catch (Exception e) {
-            log.error("Error occurred while registering trainee", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.singletonMap("error", "Unexpected error occurred: " + e.getMessage()));
+        Optional<Trainee> trainee = traineeService.create(firstName, lastName, dateOfBirth, address, transactionId);
+        if (trainee.isPresent()) {
+            String token = jwtUtil.generateToken(trainee.get().getUser().getUsername());
+            Map<String, String> response = new HashMap<>();
+            response.put("username", trainee.get().getUser().getUsername());
+            response.put("password", trainee.get().getUser().getPassword());
+            response.put("token", "Bearer " + token);
+            TransactionLogger.logResponseDetails(transactionId, HttpStatus.CREATED.value(), "Trainee created successfully");
+            TransactionLogger.logTransactionEnd(transactionId, "Trainee Registration");
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } else {
+            TransactionLogger.logResponseDetails(transactionId, HttpStatus.CONFLICT.value(), "Trainee already exists");
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Collections.singletonMap("error", "Trainee already exists."));
         }
     }
 
