@@ -1,7 +1,0 @@
-package com.example.crm_gym.exception;
-
-public class EntityNotFoundException extends RuntimeException {
-    public EntityNotFoundException(String message) {
-        super(message);
-    }
-}
