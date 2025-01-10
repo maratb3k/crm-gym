@@ -134,6 +134,7 @@ public class TrainerDaoImpl implements TrainerDAO {
                 if (trainer != null) {
                     Trainer attachedTrainer = entityManager.contains(trainer) ? trainer : entityManager.merge(trainer);
                     entityManager.remove(attachedTrainer);
+                    entityManager.flush();
                     return true;
                 } else {
                     log.error("Trainer associated with user {} not found", username);

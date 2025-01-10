@@ -103,11 +103,8 @@ public class Trainee {
     public String toString() {
         return "Trainee{" +
                 "id=" + id +
-                ", dateOfBirth=" + dateOfBirth +
-                ", address='" + address + '\'' +
-                ", user=" + user +
-                ", trainers=" + trainers +
-                ", trainings=" + trainings +
+                ", user=" + (user != null ? user.getUserId() : null) +
+                ", trainers=" + (trainers != null ? trainers.size() : 0) + " trainers" +
                 '}';
     }
 }

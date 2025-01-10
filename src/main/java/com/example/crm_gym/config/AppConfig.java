@@ -20,6 +20,11 @@ public class AppConfig implements WebMvcConfigurer {
     }
 
     @Bean
+    public RestTemplate noLoadBalancedRestTemplate() {
+        return new RestTemplate();
+    }
+
+    @Bean
     public JmsTemplate jmsTemplate(ConnectionFactory connectionFactory) {
         JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory);
         jmsTemplate.setPubSubDomain(false);
