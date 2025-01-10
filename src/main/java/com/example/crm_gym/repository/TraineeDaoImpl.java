@@ -62,13 +62,18 @@ public class TraineeDaoImpl implements TraineeDAO {
     @Override
     public boolean addTrainer(Trainee trainee, Trainer trainer) {
         try {
-            if (trainee.getTrainers().contains(trainer)) {
-                log.warn("Trainer with id {} is already associated with trainee with id {}", trainer.getId(), trainee.getId());
-                throw new DaoException("Trainer with id " + trainer.getId() + " already associated with trainee with id " + trainee.getId());
+            Trainee persistedTrainee = entityManager.find(Trainee.class, trainee.getId());
+            Trainer persistedTrainer = entityManager.find(Trainer.class, trainer.getId());
+
+            if (persistedTrainee.getTrainers().contains(persistedTrainer)) {
+                log.warn("Trainer with id {} is already associated with trainee with id {}", persistedTrainer.getId(), persistedTrainee.getId());
+                throw new DaoException("Trainer already associated with this trainee");
             }
-            trainee.getTrainers().add(trainer);
-            trainer.getTrainees().add(trainee);
-            entityManager.merge(trainee);
+            persistedTrainee.getTrainers().add(persistedTrainer);
+            persistedTrainer.getTrainees().add(persistedTrainee);
+
+            entityManager.merge(persistedTrainee);
+            entityManager.flush();
             return true;
         } catch (Exception e) {
             log.error("Error adding trainer with id {} to trainee with id: {}", trainer.getId(), trainee.getId(), e);
@@ -214,7 +219,8 @@ public class TraineeDaoImpl implements TraineeDAO {
             }
         } catch (NoResultException e) {
             log.warn("User with username {} not found", username, e);
-            throw new DaoException("User with username " + username + " not found", e);
+            return Optional.empty();
+            // throw new DaoException("User with username " + username + " not found", e);
         } catch (Exception e) {
             log.error("Error finding trainee by username: {}", username, e);
             throw new DaoException("Error finding trainee by username " + username, e);
@@ -252,4 +258,5 @@ public class TraineeDaoImpl implements TraineeDAO {
             throw new DaoException("Error finding trainees", e);
         }
     }
+
 }

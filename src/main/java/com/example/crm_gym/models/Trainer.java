@@ -71,6 +71,10 @@ public class Trainer {
         this.user = user;
     }
 
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     public void setTrainees(List<Trainee> trainees) {
         this.trainees = trainees;
     }
@@ -84,9 +88,9 @@ public class Trainer {
         return "Trainer{" +
                 "id=" + id +
                 ", specialization=" + specialization +
-                ", user=" + user +
-                ", trainees=" + trainees +
-                ", trainings=" + trainings +
+                ", user=" + (user != null ? user.getUserId() : null) +
+                ", trainees=" + (trainees != null ? trainees.size() : 0) + " trainees" +
+                ", trainings=" + (trainings != null ? trainings.size() : 0) + " trainings" +
                 '}';
     }
 }

@@ -138,10 +138,7 @@ public class User {
                 ", firstName='" + firstName + '\'' +
                 ", lastName='" + lastName + '\'' +
                 ", username='" + username + '\'' +
-                ", password='" + password + '\'' +
                 ", isActive=" + isActive +
-                ", trainee=" + trainee +
-                ", trainer=" + trainer +
                 '}';
     }
 }

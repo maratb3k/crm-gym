@@ -49,6 +49,10 @@ public class TrainingType {
         return trainings;
     }
 
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     public void setTrainings(List<Training> trainings) {
         this.trainings = trainings;
     }

@@ -50,7 +50,9 @@ public class TrainingDaoImpl implements TrainingDAO {
     @Override
     public boolean delete(Training training) {
         try {
-            entityManager.remove(training);
+            Training managedTraining = entityManager.contains(training) ? training : entityManager.merge(training);
+            entityManager.remove(managedTraining);
+            entityManager.flush();
             return true;
         } catch (Exception e) {
             log.error("Error deleting training with id: {}", training.getId());
