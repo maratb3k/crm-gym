@@ -1,0 +1,102 @@
+services:
+  eureka-server:
+    image: crm-eureka-server-eurekaserver
+    build:
+      context: ./crm-eureka-server
+      dockerfile: Dockerfile
+    container_name: crm-eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - crm-network
+
+  activemq:
+    image: rmohr/activemq:latest
+    container_name: activemq-broker
+    environment:
+      ACTIVEMQ_ADMIN_LOGIN: admin
+      ACTIVEMQ_ADMIN_PASSWORD: admin
+    ports:
+      - "61616:61616" 
+      - "8161:8161"  
+    networks:
+      - crm-network
+
+  postgres:
+    image: postgres:15
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: crm_gym
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - crm-network
+
+  crm-gym:
+    build:
+      context: ./crm-gym
+      dockerfile: Dockerfile
+    container_name: crm-gym-app
+    depends_on:
+      - eureka-server
+      - activemq
+      - postgres
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/crm_gym
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_ACTIVEMQ_BROKER_URL: tcp://activemq:61616
+      SPRING_ACTIVEMQ_USER: admin
+      SPRING_ACTIVEMQ_PASSWORD: admin
+    networks:
+      - crm-network
+
+  mongodb:
+    image: mongo:5.0
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    networks:
+      - crm-network
+    volumes:
+      - mongo_data:/data/db
+
+  crm-gym-microservice:
+    build:
+      context: ./crm-gym-microservice
+      dockerfile: Dockerfile
+    container_name: crm-gym-microservice-app
+    depends_on:
+      - eureka-server
+      - activemq
+      - mongodb
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_ACTIVEMQ_BROKER_URL: tcp://activemq:61616
+      SPRING_ACTIVEMQ_USER: admin
+      SPRING_ACTIVEMQ_PASSWORD: admin
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATA_MONGODB_DATABASE: TrainerWorkHoursService
+      SPRING_DATA_MONGODB_HOST: mongodb
+      SPRING_DATA_MONGODB_PORT: 27017
+      JWT_SECRET_KEY: wt9o1PLsOn103r58uf4wE6wI/IaWNtichVRkkk1lD5w=
+    networks:
+      - crm-network
+
+volumes:
+  postgres_data:
+    driver: local
+  mongo_data:
+    driver: local
+
+networks:
+  crm-network:
+    driver: bridge
